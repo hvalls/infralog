@@ -1,0 +1,136 @@
+{
+    "version": 4,
+    "terraform_version": "1.1.0",
+    "serial": 7,
+    "lineage": "8b35c8fd-4e40-95a2-e8b1-8321d9b15c3a",
+    "outputs": {
+        "instance_ip": {
+            "value": "10.0.1.20",
+            "type": "string"
+        },
+        "bucket_name": {
+            "value": "my-app-logs-new",
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "mode": "managed",
+            "type": "aws_instance",
+            "name": "web_server",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 1,
+                    "attributes": {
+                        "ami": "ami-0c55b159cbfafe1f0",
+                        "instance_type": "t2.small",
+                        "tags": {
+                            "Name": "WebServer",
+                            "Environment": "Staging"
+                        },
+                        "vpc_security_group_ids": [
+                            "sg-12345678",
+                            "sg-87654321"
+                        ],
+                        "subnet_id": "subnet-abcdef12",
+                        "id": "i-0a1b2c3d4e5f67891"
+                    },
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+                }
+            ]
+        },
+        {
+            "mode": "managed",
+            "type": "aws_security_group",
+            "name": "allow_http",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 1,
+                    "attributes": {
+                        "name": "allow_http",
+                        "description": "Allow HTTP traffic",
+                        "vpc_id": "vpc-0db8a12f3e4b5c6d7",
+                        "ingress": [
+                            {
+                                "from_port": 80,
+                                "to_port": 80,
+                                "protocol": "tcp",
+                                "cidr_blocks": [
+                                    "0.0.0.0/0"
+                                ]
+                            },
+                            {
+                                "from_port": 443,
+                                "to_port": 443,
+                                "protocol": "tcp",
+                                "cidr_blocks": [
+                                    "0.0.0.0/0"
+                                ]
+                            }
+                        ],
+                        "egress": [
+                            {
+                                "from_port": 0,
+                                "to_port": 0,
+                                "protocol": "-1",
+                                "cidr_blocks": [
+                                    "0.0.0.0/0"
+                                ]
+                            }
+                        ],
+                        "id": "sg-12345678"
+                    },
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+                }
+            ]
+        },
+        {
+            "mode": "managed",
+            "type": "aws_s3_bucket",
+            "name": "logs_new",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "bucket": "my-app-logs-new",
+                        "acl": "private",
+                        "versioning": {
+                            "enabled": true
+                        },
+                        "id": "my-app-logs-new"
+                    },
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ=="
+                }
+            ]
+        },
+        {
+            "mode": "managed",
+            "type": "aws_cloudwatch_metric_alarm",
+            "name": "cpu_alarm",
+            "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+            "instances": [
+                {
+                    "schema_version": 0,
+                    "attributes": {
+                        "alarm_name": "cpu-utilization",
+                        "comparison_operator": "GreaterThanOrEqualToThreshold",
+                        "evaluation_periods": 2,
+                        "metric_name": "CPUUtilization",
+                        "namespace": "AWS/EC2",
+                        "period": 300,
+                        "statistic": "Average",
+                        "threshold": 80,
+                        "dimensions": {
+                            "InstanceId": "i-0a1b2c3d4e5f67891"
+                        },
+                        "id": "cpu-utilization"
+                    },
+                    "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ=="
+                }
+            ]
+        }
+    ]
+}
