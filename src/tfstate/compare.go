@@ -14,10 +14,6 @@ func Compare(oldState, newState *State) (*StateDiff, error) {
 		return nil, fmt.Errorf("oldState and newState cannot be nil")
 	}
 
-	stateDiff.MetadataChanged = (oldState.Version != newState.Version) ||
-		(oldState.TerraformVersion != newState.TerraformVersion) ||
-		(oldState.Lineage != newState.Lineage)
-
 	oldResourceMap := make(map[string]Resource)
 	newResourceMap := make(map[string]Resource)
 

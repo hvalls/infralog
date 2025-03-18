@@ -52,7 +52,10 @@ func main() {
 			return
 		}
 
-		// TODO: Only write to targets if there are changes
+		if !diff.HasChanges() {
+			return
+		}
+
 		for _, t := range targets {
 			if err := t.Write(diff); err != nil {
 				fmt.Printf("Error writing to target: %v\n", err)

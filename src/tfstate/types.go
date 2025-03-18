@@ -72,9 +72,12 @@ type ValueDiff struct {
 }
 
 type StateDiff struct {
-	MetadataChanged bool           `json:"metadata_changed"`
-	ResourceDiffs   []ResourceDiff `json:"resource_diffs"`
-	OutputDiffs     []OutputDiff   `json:"output_diffs,omitempty"`
+	ResourceDiffs []ResourceDiff `json:"resource_diffs"`
+	OutputDiffs   []OutputDiff   `json:"output_diffs,omitempty"`
+}
+
+func (d *StateDiff) HasChanges() bool {
+	return len(d.ResourceDiffs) > 0 || len(d.OutputDiffs) > 0
 }
 
 func ResourceID(r Resource) string {
