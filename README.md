@@ -22,6 +22,9 @@ tfstate:
     bucket: ""
     key: ""
     region: ""
+target:
+  webhook:
+    url: "http://localhost:8080/infralog"
 ```
 
 ## Usage
