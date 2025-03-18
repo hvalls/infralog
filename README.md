@@ -23,3 +23,14 @@ tfstate:
     key: ""
     region: ""
 ```
+
+## Usage
+```bash
+$ infralog --config-file config.yml
+```
+
+## Build from sources
+```bash
+$ cd src/
+$ go build -o infralog main.go
+```
