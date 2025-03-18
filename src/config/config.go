@@ -17,6 +17,11 @@ type Config struct {
 			Region string `yaml:"region"`
 		} `yaml:"s3"`
 	} `yaml:"tfstate"`
+	Target struct {
+		Webhook struct {
+			URL string `yaml:"url"`
+		} `yaml:"webhook"`
+	} `yaml:"target"`
 }
 
 func LoadConfig(filename string) (*Config, error) {

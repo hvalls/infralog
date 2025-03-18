@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"infralog/backend/s3"
 	"infralog/config"
+	"infralog/target"
+	"infralog/target/webhook"
 	"infralog/tfstate"
 	"infralog/ticker"
 	"os"
@@ -25,6 +27,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	targets := []target.Target{}
+	if cfg.Target.Webhook.URL != "" {
+		targets = append(targets, webhook.New(cfg.Target.Webhook.URL))
+	}
+
 	initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
 	if err != nil {
 		fmt.Printf("Error getting initial state: %v\n", err)
@@ -43,6 +50,12 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error comparing states: %v\n", err)
 			return
+		}
+
+		for _, t := range targets {
+			if err := t.Write(diff); err != nil {
+				fmt.Printf("Error writing to target: %v\n", err)
+			}
 		}
 
 		fmt.Println(diff)
