@@ -1,23 +1,17 @@
 package tfstate
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 )
 
-func Compare(oldStateJSON, newStateJSON string) (StateDiff, error) {
-	var oldState, newState State
-	var stateDiff StateDiff
+func Compare(oldState, newState *State) (*StateDiff, error) {
+	stateDiff := &StateDiff{}
 
-	if err := json.Unmarshal([]byte(oldStateJSON), &oldState); err != nil {
-		return stateDiff, fmt.Errorf("failed to parse old state: %v", err)
-	}
-
-	if err := json.Unmarshal([]byte(newStateJSON), &newState); err != nil {
-		return stateDiff, fmt.Errorf("failed to parse new state: %v", err)
+	if oldState == nil || newState == nil {
+		return nil, fmt.Errorf("oldState and newState cannot be nil")
 	}
 
 	stateDiff.MetadataChanged = (oldState.Version != newState.Version) ||

@@ -5,7 +5,7 @@
     "lineage": "8b35c8fd-4e40-95a2-e8b1-8321d9b15c3a",
     "outputs": {
         "instance_ip": {
-            "value": "10.0.1.20",
+            "value": "10.0.1.28",
             "type": "string"
         },
         "bucket_name": {

@@ -1,6 +1,9 @@
 package tfstate
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const (
 	DiffStatusAdded     = "added"
@@ -8,6 +11,8 @@ const (
 	DiffStatusChanged   = "changed"
 	DiffStatusUnchanged = "unchanged"
 )
+
+var LastState *State
 
 type State struct {
 	Version          int               `json:"version"`
@@ -78,4 +83,13 @@ func ResourceID(r Resource) string {
 		modulePrefix = r.Module + "."
 	}
 	return fmt.Sprintf("%s%s.%s", modulePrefix, r.Type, r.Name)
+}
+
+func ParseState(data string) (*State, error) {
+	var state State
+	err := json.Unmarshal([]byte(data), &state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse state: %w", err)
+	}
+	return &state, nil
 }

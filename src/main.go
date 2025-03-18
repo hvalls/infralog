@@ -1,42 +1,69 @@
 package main
 
 import (
-	"encoding/json"
+	"flag"
 	"fmt"
+	"infralog/backend/s3"
+	"infralog/config"
 	"infralog/tfstate"
-
+	"infralog/ticker"
 	"os"
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Println("Usage: go run main.go <old_state_file> <new_state_file>")
+	configFile := flag.String("config-file", "", "Path to configuration file")
+	flag.Parse()
+
+	if *configFile == "" {
+		fmt.Println("Error: --config-file parameter is required")
 		os.Exit(1)
 	}
 
-	oldStateData, err := os.ReadFile(os.Args[1])
+	cfg, err := config.LoadConfig(*configFile)
 	if err != nil {
-		fmt.Printf("Error reading old state file: %v\n", err)
+		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
-	newStateData, err := os.ReadFile(os.Args[2])
+	initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
 	if err != nil {
-		fmt.Printf("Error reading new state file: %v\n", err)
+		fmt.Printf("Error getting initial state: %v\n", err)
 		os.Exit(1)
 	}
 
-	diff, err := tfstate.Compare(string(oldStateData), string(newStateData))
+	tfstate.LastState, err = tfstate.ParseState(string(initialStateData))
 	if err != nil {
-		fmt.Printf("Error comparing states: %v\n", err)
+		fmt.Printf("Error parsing initial state: %v\n", err)
 		os.Exit(1)
 	}
 
-	jsonDiff, err := json.MarshalIndent(diff, "", "  ")
+	t := ticker.NewTicker(cfg.Polling.Interval)
+	t.Start(func() {
+		diff, err := compareStates(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
+		if err != nil {
+			fmt.Printf("Error comparing states: %v\n", err)
+			return
+		}
+
+		fmt.Println(diff)
+	})
+}
+
+func compareStates(bucket, key, region string) (*tfstate.StateDiff, error) {
+	currentStateData, err := s3.GetObject(bucket, key, region)
 	if err != nil {
-		fmt.Printf("Error marshaling diff to JSON: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to get current state: %w", err)
 	}
 
-	fmt.Println(string(jsonDiff))
+	currentState, err := tfstate.ParseState(string(currentStateData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current state: %w", err)
+	}
+
+	diff, err := tfstate.Compare(tfstate.LastState, currentState)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compare states: %w", err)
+	}
+
+	return diff, nil
 }

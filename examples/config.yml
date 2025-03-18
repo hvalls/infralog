@@ -1,0 +1,7 @@
+polling:
+  interval: 5
+tfstate:
+  s3:
+    bucket: "the-bucket"
+    key: "the-key"
+    region: "eu-west-1"
