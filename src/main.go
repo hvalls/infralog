@@ -46,9 +46,23 @@ func main() {
 
 	t := ticker.NewTicker(cfg.Polling.Interval)
 	t.Start(func() {
-		diff, err := compareStates(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
+		fmt.Println("Polling...")
+
+		currentStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
 		if err != nil {
-			fmt.Printf("Error comparing states: %v\n", err)
+			fmt.Printf("Error getting state: %v\n", err)
+			return
+		}
+
+		currentState, err := tfstate.ParseState(string(currentStateData))
+		if err != nil {
+			fmt.Printf("Error parsing state: %v\n", err)
+			return
+		}
+
+		diff, err := tfstate.Compare(tfstate.LastState, currentState)
+		if err != nil {
+			fmt.Printf("failed to compare states: %v", err)
 			return
 		}
 
@@ -62,25 +76,6 @@ func main() {
 			}
 		}
 
-		fmt.Println(diff)
+		tfstate.LastState = currentState
 	})
-}
-
-func compareStates(bucket, key, region string) (*tfstate.StateDiff, error) {
-	currentStateData, err := s3.GetObject(bucket, key, region)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current state: %w", err)
-	}
-
-	currentState, err := tfstate.ParseState(string(currentStateData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse current state: %w", err)
-	}
-
-	diff, err := tfstate.Compare(tfstate.LastState, currentState)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compare states: %w", err)
-	}
-
-	return diff, nil
 }
