@@ -17,7 +17,7 @@ tfstate:
 target:
   webhook:
     url: "http://localhost:8080/infralog"
-    method: "POST" # Only POST method is supported. Default is POST.
+    method: "POST" # Only POST and PUT supported. Default is POST.
 filter:
   resource_types: # If not specified, all resources will be monitored. Use [] to not monitor any resource.
     - "aws_instance"
