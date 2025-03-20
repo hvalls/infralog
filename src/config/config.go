@@ -15,7 +15,8 @@ type Config struct {
 	TFState TFState `yaml:"tfstate"`
 	Target  struct {
 		Webhook struct {
-			URL string `yaml:"url"`
+			URL    string `yaml:"url"`
+			Method string `yaml:"method"`
 		} `yaml:"webhook"`
 	} `yaml:"target"`
 	Filter Filter `yaml:"filter"`

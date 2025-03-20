@@ -10,13 +10,20 @@ import (
 )
 
 type WebhookTarget struct {
-	URL string
+	URL    string
+	Method string
 }
 
-func New(url string) *WebhookTarget {
-	return &WebhookTarget{
-		URL: url,
+func New(url, method string) (*WebhookTarget, error) {
+	if method == "" {
+		method = "POST"
+	} else if method != "POST" && method != "post" && method != "PUT" && method != "put" {
+		return nil, fmt.Errorf("invalid method: %s. Method must be POST or PUT", method)
 	}
+	return &WebhookTarget{
+		URL:    url,
+		Method: method,
+	}, nil
 }
 
 func (t *WebhookTarget) Write(d *tfstate.StateDiff, tfs config.TFState) error {

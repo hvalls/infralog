@@ -8,6 +8,7 @@ tfstate:
 target:
   webhook:
     url: "http://localhost:8080/infralog"
+    method: "POST"
 filter:
   resource_types:
     - "aws_instance"

@@ -29,7 +29,12 @@ func main() {
 
 	targets := []target.Target{}
 	if cfg.Target.Webhook.URL != "" {
-		targets = append(targets, webhook.New(cfg.Target.Webhook.URL))
+		webhookTarget, err := webhook.New(cfg.Target.Webhook.URL, cfg.Target.Webhook.Method)
+		if err != nil {
+			fmt.Printf("Error creating webhook target: %v\n", err)
+			os.Exit(1)
+		}
+		targets = append(targets, webhookTarget)
 	}
 
 	initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
