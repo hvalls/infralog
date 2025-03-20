@@ -4,14 +4,6 @@
 
 Infralog monitors your Terraform state files and emits resource-level events when changes are detected.
 
-## Use Cases
-- Trigger post-deployment verification scripts for specific resources
-- Implement custom compliance checks when sensitive resources are modified
-- Execute resource-specific cleanup operations after terraform destroy
-- Build audit trails of infrastructure changes with resource-level granularity
-- Automate cross-account or cross-region synchronization based on infrastructure changes
-- Integrate with existing monitoring and alerting systems
-
 ## config.yml
 
 ```yaml
@@ -33,15 +25,15 @@ filter:
     - "instance_ip"
 ```
 
-## Usage
-```bash
-$ infralog --config-file config.yml
-```
-
 ## Build from sources
 ```bash
 $ cd src/
 $ go build -o infralog main.go
+```
+
+## Usage
+```bash
+$ infralog --config-file config.yml
 ```
 
 ## Targets
