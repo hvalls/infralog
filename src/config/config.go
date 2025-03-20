@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"slices"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -22,6 +24,11 @@ type Config struct {
 			URL string `yaml:"url"`
 		} `yaml:"webhook"`
 	} `yaml:"target"`
+	Filter Filter `yaml:"filter"`
+}
+
+type Filter struct {
+	ResourceTypes []string `yaml:"resource_types"`
 }
 
 func LoadConfig(filename string) (*Config, error) {
@@ -36,4 +43,14 @@ func LoadConfig(filename string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (f *Filter) MatchesResourceType(resourceType string) bool {
+	if f.ResourceTypes == nil {
+		return true
+	}
+	if len(f.ResourceTypes) == 0 {
+		return false
+	}
+	return slices.Contains(f.ResourceTypes, resourceType)
 }

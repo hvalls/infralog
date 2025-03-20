@@ -2,30 +2,34 @@ package tfstate
 
 import (
 	"fmt"
+	"infralog/config"
 	"reflect"
 	"sort"
-	"strings"
 )
 
-func Compare(oldState, newState *State) (*StateDiff, error) {
+func mapResources(resources []Resource, filter config.Filter) map[ResourceID]Resource {
+	resourceMap := make(map[ResourceID]Resource)
+	for _, resource := range resources {
+		id := resource.GetID()
+		parts := id.Split()
+		if filter.MatchesResourceType(parts.resourceType) {
+			resourceMap[id] = resource
+		}
+	}
+	return resourceMap
+}
+
+func Compare(oldState, newState *State, filter config.Filter) (*StateDiff, error) {
 	stateDiff := &StateDiff{}
 
 	if oldState == nil || newState == nil {
 		return nil, fmt.Errorf("oldState and newState cannot be nil")
 	}
 
-	oldResourceMap := make(map[string]Resource)
-	newResourceMap := make(map[string]Resource)
+	oldResourceMap := mapResources(oldState.Resources, filter)
+	newResourceMap := mapResources(newState.Resources, filter)
 
-	for _, resource := range oldState.Resources {
-		oldResourceMap[ResourceID(resource)] = resource
-	}
-
-	for _, resource := range newState.Resources {
-		newResourceMap[ResourceID(resource)] = resource
-	}
-
-	allResourceIDs := make(map[string]bool)
+	allResourceIDs := make(map[ResourceID]bool)
 	for id := range oldResourceMap {
 		allResourceIDs[id] = true
 	}
@@ -33,18 +37,20 @@ func Compare(oldState, newState *State) (*StateDiff, error) {
 		allResourceIDs[id] = true
 	}
 
-	var sortedResourceIDs []string
+	var sortedResourceIDs []ResourceID
 	for id := range allResourceIDs {
 		sortedResourceIDs = append(sortedResourceIDs, id)
 	}
-	sort.Strings(sortedResourceIDs)
+	sort.Slice(sortedResourceIDs, func(i, j int) bool {
+		return string(sortedResourceIDs[i]) < string(sortedResourceIDs[j])
+	})
 
 	for _, id := range sortedResourceIDs {
 		oldResource, oldExists := oldResourceMap[id]
 		newResource, newExists := newResourceMap[id]
 
 		var resourceDiff ResourceDiff
-		parts := splitResourceID(id)
+		parts := id.Split()
 		resourceDiff.ResourceType = parts.resourceType
 		resourceDiff.ResourceName = parts.resourceName
 
@@ -73,52 +79,21 @@ func Compare(oldState, newState *State) (*StateDiff, error) {
 		}
 	}
 
-	if oldState.Outputs != nil || newState.Outputs != nil {
-		outputDiffs := compareOutputs(oldState.Outputs, newState.Outputs)
-		if len(outputDiffs) > 0 {
-			stateDiff.OutputDiffs = outputDiffs
-		}
+	outputDiffs := compareOutputs(oldState.Outputs, newState.Outputs)
+	if len(outputDiffs) > 0 {
+		stateDiff.OutputDiffs = outputDiffs
 	}
 
 	return stateDiff, nil
 }
 
-// splitResourceID splits a resource ID into its component parts
-func splitResourceID(id string) ResourceIDParts {
-	var parts ResourceIDParts
-
-	segments := strings.Split(id, ".")
-
-	if len(segments) < 2 {
-		// Invalid format, return empty parts
-		return parts
-	}
-
-	if segments[0] == "module" && len(segments) >= 4 {
-		// Format: module.module_name.resource_type.resource_name
-		moduleSegments := segments[:len(segments)-2]
-		parts.module = strings.Join(moduleSegments, ".")
-		parts.resourceType = segments[len(segments)-2]
-		parts.resourceName = segments[len(segments)-1]
-	} else {
-		// Format: resource_type.resource_name
-		parts.resourceType = segments[0]
-		parts.resourceName = segments[1]
-	}
-
-	return parts
-}
-
-// compareInstances compares the instances of a resource
 func compareInstances(oldInstances, newInstances []ResourceInstance) map[string]ValueDiff {
 	attrDiffs := make(map[string]ValueDiff)
 
-	// Simple case: compare first instance (for non-count resources)
 	if len(oldInstances) > 0 && len(newInstances) > 0 {
 		oldAttrs := oldInstances[0].Attributes
 		newAttrs := newInstances[0].Attributes
 
-		// Get all attribute keys
 		allKeys := make(map[string]bool)
 		for k := range oldAttrs {
 			allKeys[k] = true
@@ -127,7 +102,6 @@ func compareInstances(oldInstances, newInstances []ResourceInstance) map[string]
 			allKeys[k] = true
 		}
 
-		// Compare each attribute
 		for key := range allKeys {
 			oldVal, oldExists := oldAttrs[key]
 			newVal, newExists := newAttrs[key]
@@ -151,7 +125,6 @@ func compareInstances(oldInstances, newInstances []ResourceInstance) map[string]
 func compareOutputs(oldOutputs, newOutputs map[string]Output) []OutputDiff {
 	var outputDiffs []OutputDiff
 
-	// Get all output names
 	allNames := make(map[string]bool)
 	for name := range oldOutputs {
 		allNames[name] = true

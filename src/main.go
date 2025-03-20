@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 
-		diff, err := tfstate.Compare(tfstate.LastState, currentState)
+		diff, err := tfstate.Compare(tfstate.LastState, currentState, cfg.Filter)
 		if err != nil {
 			fmt.Printf("failed to compare states: %v", err)
 			return

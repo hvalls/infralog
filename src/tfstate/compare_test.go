@@ -5,89 +5,6 @@ import (
 	"testing"
 )
 
-func TestResourceID(t *testing.T) {
-	tests := []struct {
-		name     string
-		resource Resource
-		want     string
-	}{
-		{
-			name: "simple resource",
-			resource: Resource{
-				Type: "aws_instance",
-				Name: "web",
-			},
-			want: "aws_instance.web",
-		},
-		{
-			name: "resource with module",
-			resource: Resource{
-				Module: "module.network",
-				Type:   "aws_vpc",
-				Name:   "main",
-			},
-			want: "module.network.aws_vpc.main",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ResourceID(tt.resource); got != tt.want {
-				t.Errorf("ResourceID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSplitResourceID(t *testing.T) {
-	tests := []struct {
-		name string
-		id   string
-		want ResourceIDParts
-	}{
-		{
-			name: "simple resource",
-			id:   "aws_instance.web",
-			want: ResourceIDParts{
-				resourceType: "aws_instance",
-				resourceName: "web",
-			},
-		},
-		{
-			name: "resource with module",
-			id:   "module.network.aws_vpc.main",
-			want: ResourceIDParts{
-				module:       "module.network",
-				resourceType: "aws_vpc",
-				resourceName: "main",
-			},
-		},
-		{
-			name: "resource with nested module",
-			id:   "module.network.module.subnets.aws_subnet.public",
-			want: ResourceIDParts{
-				module:       "module.network.module.subnets",
-				resourceType: "aws_subnet",
-				resourceName: "public",
-			},
-		},
-		{
-			name: "invalid format",
-			id:   "invalid",
-			want: ResourceIDParts{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := splitResourceID(tt.id)
-			if got.module != tt.want.module || got.resourceType != tt.want.resourceType || got.resourceName != tt.want.resourceName {
-				t.Errorf("splitResourceID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCompareInstances(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -209,7 +126,7 @@ func TestCompareOutputs(t *testing.T) {
 		name       string
 		oldOutputs map[string]Output
 		newOutputs map[string]Output
-		want       []ResourceDiff
+		want       []OutputDiff
 	}{
 		{
 			name: "identical outputs",
@@ -223,7 +140,7 @@ func TestCompareOutputs(t *testing.T) {
 					Value: "vpc-123456",
 				},
 			},
-			want: []ResourceDiff{},
+			want: []OutputDiff{},
 		},
 		{
 			name: "changed output",
@@ -237,16 +154,13 @@ func TestCompareOutputs(t *testing.T) {
 					Value: "vpc-654321",
 				},
 			},
-			want: []ResourceDiff{
+			want: []OutputDiff{
 				{
-					ResourceName: "vpc_id",
-					ResourceType: "output",
-					Status:       DiffStatusChanged,
-					AttributeDiffs: map[string]ValueDiff{
-						"value": {
-							OldValue: "vpc-123456",
-							NewValue: "vpc-654321",
-						},
+					OutputName: "vpc_id",
+					Status:     DiffStatusChanged,
+					ValueDiff: ValueDiff{
+						OldValue: "vpc-123456",
+						NewValue: "vpc-654321",
 					},
 				},
 			},
@@ -259,12 +173,11 @@ func TestCompareOutputs(t *testing.T) {
 					Value: "vpc-123456",
 				},
 			},
-			want: []ResourceDiff{
+			want: []OutputDiff{
 				{
-					ResourceName:   "vpc_id",
-					ResourceType:   "output",
-					Status:         DiffStatusAdded,
-					AttributeDiffs: map[string]ValueDiff{},
+					OutputName: "vpc_id",
+					Status:     DiffStatusAdded,
+					ValueDiff:  ValueDiff{},
 				},
 			},
 		},
@@ -276,12 +189,11 @@ func TestCompareOutputs(t *testing.T) {
 				},
 			},
 			newOutputs: map[string]Output{},
-			want: []ResourceDiff{
+			want: []OutputDiff{
 				{
-					ResourceName:   "vpc_id",
-					ResourceType:   "output",
-					Status:         DiffStatusRemoved,
-					AttributeDiffs: map[string]ValueDiff{},
+					OutputName: "vpc_id",
+					Status:     DiffStatusRemoved,
+					ValueDiff:  ValueDiff{},
 				},
 			},
 		},

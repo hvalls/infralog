@@ -5,7 +5,10 @@ tfstate:
     bucket: "the-bucket"
     key: "the-key"
     region: "eu-west-1"
-
 target:
   webhook:
     url: "http://localhost:8080/infralog"
+filter:
+  resource_types:
+    - "aws_instance"
+    - "aws_s3_bucket"

@@ -25,6 +25,10 @@ tfstate:
 target:
   webhook:
     url: "http://localhost:8080/infralog"
+filter:
+  resource_types: # If not specified, all resources will be monitored. Use [] to not monitor any resource.
+    - "aws_instance"
+    - "aws_s3_bucket"
 ```
 
 ## Usage
@@ -38,7 +42,9 @@ $ cd src/
 $ go build -o infralog main.go
 ```
 
-## Webhook target
+## Targets
+
+### Webhook target
 
 - `POST` request will be made to the specified URL
 - The request body will contain the JSON payload with the following structure:
