@@ -4,6 +4,12 @@
 
 Infralog monitors your Terraform state files and emits resource-level events when changes are detected.
 
+## Build from sources
+```bash
+$ cd src/
+$ go build -o infralog main.go
+```
+
 ## config.yml
 
 ```yaml
@@ -24,12 +30,6 @@ filter:
     - "aws_s3_bucket"
   outputs: # If not specified, all outputs will be monitored. Use [] to not monitor any output.
     - "instance_ip"
-```
-
-## Build from sources
-```bash
-$ cd src/
-$ go build -o infralog main.go
 ```
 
 ## Usage
