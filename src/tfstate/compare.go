@@ -7,18 +7,6 @@ import (
 	"sort"
 )
 
-func mapResources(resources []Resource, filter config.Filter) map[ResourceID]Resource {
-	resourceMap := make(map[ResourceID]Resource)
-	for _, resource := range resources {
-		id := resource.GetID()
-		parts := id.Split()
-		if filter.MatchesResourceType(parts.resourceType) {
-			resourceMap[id] = resource
-		}
-	}
-	return resourceMap
-}
-
 func Compare(oldState, newState *State, filter config.Filter) (*StateDiff, error) {
 	stateDiff := &StateDiff{}
 
@@ -79,12 +67,38 @@ func Compare(oldState, newState *State, filter config.Filter) (*StateDiff, error
 		}
 	}
 
-	outputDiffs := compareOutputs(oldState.Outputs, newState.Outputs)
+	filteredOldOutputs := make(map[string]Output)
+	for name, output := range oldState.Outputs {
+		if filter.MatchesOutput(name) {
+			filteredOldOutputs[name] = output
+		}
+	}
+
+	filteredNewOutputs := make(map[string]Output)
+	for name, output := range newState.Outputs {
+		if filter.MatchesOutput(name) {
+			filteredNewOutputs[name] = output
+		}
+	}
+
+	outputDiffs := compareOutputs(filteredOldOutputs, filteredNewOutputs)
 	if len(outputDiffs) > 0 {
 		stateDiff.OutputDiffs = outputDiffs
 	}
 
 	return stateDiff, nil
+}
+
+func mapResources(resources []Resource, filter config.Filter) map[ResourceID]Resource {
+	resourceMap := make(map[ResourceID]Resource)
+	for _, resource := range resources {
+		id := resource.GetID()
+		parts := id.Split()
+		if filter.MatchesResourceType(parts.resourceType) {
+			resourceMap[id] = resource
+		}
+	}
+	return resourceMap
 }
 
 func compareInstances(oldInstances, newInstances []ResourceInstance) map[string]ValueDiff {

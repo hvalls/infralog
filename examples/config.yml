@@ -12,3 +12,5 @@ filter:
   resource_types:
     - "aws_instance"
     - "aws_s3_bucket"
+  outputs:
+    - "instance_ip"

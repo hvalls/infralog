@@ -29,6 +29,8 @@ filter:
   resource_types: # If not specified, all resources will be monitored. Use [] to not monitor any resource.
     - "aws_instance"
     - "aws_s3_bucket"
+  outputs: # If not specified, all outputs will be monitored. Use [] to not monitor any output.
+    - "instance_ip"
 ```
 
 ## Usage

@@ -29,6 +29,7 @@ type Config struct {
 
 type Filter struct {
 	ResourceTypes []string `yaml:"resource_types"`
+	Outputs       []string `yaml:"outputs"`
 }
 
 func LoadConfig(filename string) (*Config, error) {
@@ -53,4 +54,14 @@ func (f *Filter) MatchesResourceType(resourceType string) bool {
 		return false
 	}
 	return slices.Contains(f.ResourceTypes, resourceType)
+}
+
+func (f *Filter) MatchesOutput(output string) bool {
+	if f.Outputs == nil {
+		return true
+	}
+	if len(f.Outputs) == 0 {
+		return false
+	}
+	return slices.Contains(f.Outputs, output)
 }
