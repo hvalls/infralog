@@ -12,19 +12,21 @@ type Config struct {
 	Polling struct {
 		Interval int `yaml:"interval"`
 	} `yaml:"polling"`
-	TFState struct {
-		S3 struct {
-			Bucket string `yaml:"bucket"`
-			Key    string `yaml:"key"`
-			Region string `yaml:"region"`
-		} `yaml:"s3"`
-	} `yaml:"tfstate"`
-	Target struct {
+	TFState TFState `yaml:"tfstate"`
+	Target  struct {
 		Webhook struct {
 			URL string `yaml:"url"`
 		} `yaml:"webhook"`
 	} `yaml:"target"`
 	Filter Filter `yaml:"filter"`
+}
+
+type TFState struct {
+	S3 struct {
+		Bucket string `yaml:"bucket" json:"bucket"`
+		Key    string `yaml:"key" json:"key"`
+		Region string `yaml:"region" json:"region"`
+	} `yaml:"s3" json:"s3"`
 }
 
 type Filter struct {

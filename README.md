@@ -44,28 +44,39 @@ $ infralog --config-file config.yml
 - The request body will contain the JSON payload with the following structure:
 ```json
 {
-  "resource_diffs": [
-    {
-      "resource_type": "aws_instance",
-      "resource_name": "web_server",
-      "status": "changed",
-      "attribute_diffs": {
-        "instance_type": {
-            "old_value": "t2.small",
-            "new_value": "t2.medium"
+    "diffs": {
+        "resource_diffs": [
+            {
+                "resource_type": "aws_instance",
+                "resource_name": "web_server",
+                "status": "changed",
+                "attribute_diffs": {
+                    "instance_type": {
+                        "old_value": "t2.small",
+                        "new_value": "t2.medium"
+                    }
+                }
+            }
+        ],
+        "output_diffs": [
+            {
+                "output_name": "instance_ip",
+                "status": "changed",
+                "value_diff": {
+                    "old_value": "10.0.1.20",
+                    "new_value": "10.0.1.28"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "tfstate": {
+            "s3": {
+                "bucket": "",
+                "key": "",
+                "region": ""
+            }
         }
-      }
     }
-  ],
-  "output_diffs": [
-    {
-      "output_name": "instance_ip",
-      "status": "changed",
-      "value_diff": {
-          "old_value": "10.0.1.20",
-          "new_value": "10.0.1.28"
-      }
-    }
-  ]
 }
 ```

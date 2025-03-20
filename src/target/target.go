@@ -1,7 +1,10 @@
 package target
 
-import "infralog/tfstate"
+import (
+	"infralog/config"
+	"infralog/tfstate"
+)
 
 type Target interface {
-	Write(*tfstate.StateDiff) error
+	Write(*tfstate.StateDiff, config.TFState) error
 }

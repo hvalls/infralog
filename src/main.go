@@ -71,7 +71,7 @@ func main() {
 		}
 
 		for _, t := range targets {
-			if err := t.Write(diff); err != nil {
+			if err := t.Write(diff, cfg.TFState); err != nil {
 				fmt.Printf("Error writing to target: %v\n", err)
 			}
 		}

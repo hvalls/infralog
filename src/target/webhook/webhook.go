@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"infralog/config"
 	"infralog/tfstate"
 	"net/http"
 )
@@ -18,10 +19,10 @@ func New(url string) *WebhookTarget {
 	}
 }
 
-func (t *WebhookTarget) Write(d *tfstate.StateDiff) error {
-	jsonData, err := json.Marshal(d)
+func (t *WebhookTarget) Write(d *tfstate.StateDiff, tfs config.TFState) error {
+	jsonData, err := getJSONBody(d, tfs)
 	if err != nil {
-		return fmt.Errorf("error marshaling state diff: %w", err)
+		return err
 	}
 
 	resp, err := http.Post(t.URL, "application/json", bytes.NewBuffer(jsonData))
@@ -35,4 +36,27 @@ func (t *WebhookTarget) Write(d *tfstate.StateDiff) error {
 	}
 
 	return nil
+}
+
+func getJSONBody(d *tfstate.StateDiff, tfs config.TFState) ([]byte, error) {
+	body := struct {
+		Diffs    *tfstate.StateDiff `json:"diffs"`
+		Metadata struct {
+			TFState config.TFState `json:"tfstate"`
+		} `json:"metadata"`
+	}{
+		Diffs: d,
+		Metadata: struct {
+			TFState config.TFState `json:"tfstate"`
+		}{
+			TFState: tfs,
+		},
+	}
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling webhook body: %w", err)
+	}
+
+	return jsonData, nil
 }
