@@ -16,12 +16,17 @@ func main() {
 	configFile := flag.String("config-file", "", "Path to configuration file")
 	flag.Parse()
 
-	if *configFile == "" {
-		fmt.Println("Error: --config-file parameter is required")
+	configPath := os.Getenv("INFRALOG_CONFIG_FILE")
+	if *configFile != "" {
+		configPath = *configFile
+	}
+
+	if configPath == "" {
+		fmt.Println("Error: config file must be provided either via --config-file parameter or INFRALOG_CONFIG_FILE environment variable")
 		os.Exit(1)
 	}
 
-	cfg, err := config.LoadConfig(*configFile)
+	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)

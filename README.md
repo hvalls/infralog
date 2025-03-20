@@ -8,7 +8,7 @@ Infralog monitors your Terraform state files and emits resource-level events whe
 
 ```yaml
 polling:
-  interval: 10 # in seconds
+  interval: 600 # in seconds
 tfstate:
   s3:
     bucket: ""
@@ -33,8 +33,13 @@ $ go build -o infralog main.go
 ```
 
 ## Usage
+Using `--config-file` flag:
 ```bash
 $ infralog --config-file config.yml
+```
+Using `INFRALOG_CONFIG_FILE` environment variable:
+```bash
+$ INFRALOG_CONFIG_FILE=config.yml infralog
 ```
 
 ## Targets
