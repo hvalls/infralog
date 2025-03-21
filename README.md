@@ -86,3 +86,22 @@ $ INFRALOG_CONFIG_FILE=config.yml infralog
     }
 }
 ```
+
+## Contributions
+
+Contributions are welcome! Here's how you can help:
+
+1. Fork the repository
+2. Create a new branch for your feature
+3. Make your changes
+4. Run tests if applicable
+5. Commit your changes
+6. Push to the branch
+7. Open a pull request
+
+Please make sure to:
+- Update documentation as needed
+- Add tests for new features when applicable
+- Ensure all tests pass before submitting
+
+For major changes, please open an issue first to discuss what you would like to change.
