@@ -71,11 +71,18 @@ type Persistence struct {
 }
 
 type TFState struct {
-	S3 struct {
-		Bucket string `yaml:"bucket" json:"bucket"`
-		Key    string `yaml:"key" json:"key"`
-		Region string `yaml:"region" json:"region"`
-	} `yaml:"s3" json:"s3"`
+	S3    S3Config    `yaml:"s3" json:"s3"`
+	Local LocalConfig `yaml:"local" json:"local"`
+}
+
+type S3Config struct {
+	Bucket string `yaml:"bucket" json:"bucket"`
+	Key    string `yaml:"key" json:"key"`
+	Region string `yaml:"region" json:"region"`
+}
+
+type LocalConfig struct {
+	Path string `yaml:"path" json:"path"`
 }
 
 type Filter struct {

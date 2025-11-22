@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"infralog/backend"
+	"infralog/backend/local"
 	"infralog/backend/s3"
 	"infralog/config"
 	"infralog/persistence"
@@ -81,8 +83,21 @@ func main() {
 		}
 	}
 
+	// Initialize backend
+	var stateBackend backend.Backend
+	switch {
+	case cfg.TFState.Local.Path != "":
+		stateBackend = local.New(cfg.TFState.Local)
+	case cfg.TFState.S3.Bucket != "":
+		stateBackend = s3.New(cfg.TFState.S3)
+	default:
+		fmt.Println("Error: no backend configured. Configure either tfstate.s3 or tfstate.local")
+		os.Exit(1)
+	}
+	fmt.Printf("Using %s backend\n", stateBackend.Name())
+
 	if tfstate.LastState == nil {
-		initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
+		initialStateData, err := stateBackend.GetState()
 		if err != nil {
 			fmt.Printf("Error getting initial state: %v\n", err)
 			os.Exit(1)
@@ -105,7 +120,7 @@ func main() {
 	t.Start(func() {
 		fmt.Println("Polling...")
 
-		currentStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
+		currentStateData, err := stateBackend.GetState()
 		if err != nil {
 			fmt.Printf("Error getting state: %v\n", err)
 			return

@@ -6,7 +6,7 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 
 ## Features
 
-- Monitors Terraform state files stored in S3
+- Monitors Terraform state files from multiple backends (S3, local filesystem)
 - Detects resource and output changes with detailed diffs
 - Configurable polling intervals
 - Webhook notifications with JSON payloads and automatic retries
@@ -46,10 +46,14 @@ polling:
   interval: 600  # Polling interval in seconds
 
 tfstate:
+  # Configure one backend source (S3 or local)
   s3:
     bucket: "my-terraform-state-bucket"
     key: "path/to/terraform.tfstate"
     region: "us-east-1"
+  # Or use a local file:
+  # local:
+  #   path: "/path/to/terraform.tfstate"
 
 target:
   # Webhook target (optional)
@@ -96,6 +100,36 @@ persistence:
   # Enables change detection across restarts.
   state_file: "/var/lib/infralog/state.json"
 ```
+
+## Backends
+
+Infralog supports reading Terraform state files from multiple backend sources. Configure one backend in the `tfstate` section.
+
+### S3
+
+Read state files from Amazon S3:
+
+```yaml
+tfstate:
+  s3:
+    bucket: "my-terraform-state-bucket"
+    key: "path/to/terraform.tfstate"
+    region: "us-east-1"
+```
+
+AWS credentials are loaded from the standard AWS credential chain (environment variables, shared credentials file, IAM role, etc.).
+
+### Local
+
+Read state files from the local filesystem:
+
+```yaml
+tfstate:
+  local:
+    path: "/path/to/terraform.tfstate"
+```
+
+This is useful for development, testing, or when using Terraform's local backend.
 
 ## Targets
 

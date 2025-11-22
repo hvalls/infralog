@@ -5,12 +5,18 @@
 polling:
   interval: 600  # Polling interval in seconds
 
-# Terraform state file location
+# Terraform state file location (configure one backend)
 tfstate:
+  # S3 backend - read state from Amazon S3
   s3:
     bucket: "my-terraform-state-bucket"
     key: "path/to/terraform.tfstate"
     region: "us-east-1"
+
+  # Local backend - read state from local filesystem
+  # Uncomment below and comment out s3 to use local backend
+  # local:
+  #   path: "/path/to/terraform.tfstate"
 
 # Notification targets (configure one or more)
 # If no targets are configured, stdout is used automatically
