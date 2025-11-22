@@ -7,6 +7,7 @@ import (
 	"infralog/config"
 	"infralog/persistence"
 	"infralog/target"
+	"infralog/target/slack"
 	"infralog/target/webhook"
 	"infralog/tfstate"
 	"infralog/ticker"
@@ -41,6 +42,14 @@ func main() {
 			os.Exit(1)
 		}
 		targets = append(targets, webhookTarget)
+	}
+	if cfg.Target.Slack.WebhookURL != "" {
+		slackTarget, err := slack.New(cfg.Target.Slack)
+		if err != nil {
+			fmt.Printf("Error creating slack target: %v\n", err)
+			os.Exit(1)
+		}
+		targets = append(targets, slackTarget)
 	}
 
 	var store persistence.Store

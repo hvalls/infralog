@@ -20,6 +20,14 @@ type Config struct {
 
 type Target struct {
 	Webhook WebhookConfig `yaml:"webhook"`
+	Slack   SlackConfig   `yaml:"slack"`
+}
+
+type SlackConfig struct {
+	WebhookURL string `yaml:"webhook_url"`
+	Channel    string `yaml:"channel"`    // Optional: override default channel
+	Username   string `yaml:"username"`   // Optional: override bot username
+	IconEmoji  string `yaml:"icon_emoji"` // Optional: override bot icon
 }
 
 type WebhookConfig struct {

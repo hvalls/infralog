@@ -10,6 +10,7 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 - Detects resource and output changes with detailed diffs
 - Configurable polling intervals
 - Webhook notifications with JSON payloads and automatic retries
+- Slack notifications with formatted messages
 - Optional filtering by resource type and output name
 - State persistence to detect changes across restarts
 
@@ -50,6 +51,7 @@ tfstate:
     region: "us-east-1"
 
 target:
+  # Webhook target (optional)
   webhook:
     url: "https://example.com/infralog"
     method: "POST"  # POST or PUT (default: POST)
@@ -62,6 +64,13 @@ target:
         - 502
         - 503
         - 504
+
+  # Slack target (optional)
+  slack:
+    webhook_url: "https://hooks.slack.com/services/T00/B00/XXX"
+    channel: "#infrastructure"  # Optional: override default channel
+    username: "Infralog"        # Optional: override bot username
+    icon_emoji: ":terraform:"   # Optional: override bot icon
 
 filter:
   # Optional: List of resource types to monitor.
@@ -136,6 +145,28 @@ Webhook requests are automatically retried on transient failures:
 - Configurable HTTP status codes trigger a retry (default: 500, 502, 503, 504)
 - Retries use exponential backoff with jitter to prevent thundering herd
 - Non-retryable errors (e.g., 400 Bad Request) fail immediately
+
+### Slack
+
+Sends formatted notifications to a Slack channel using incoming webhooks.
+
+To set up:
+
+1. Create a Slack app at https://api.slack.com/apps
+2. Enable "Incoming Webhooks" and create a webhook for your channel
+3. Copy the webhook URL to your configuration
+
+Messages include:
+
+- Header with "Terraform State Changes Detected"
+- State file location (bucket, key, region)
+- Resource changes with color-coded status indicators
+- Output changes with before/after values
+
+Status indicators:
+- :large_green_circle: Added
+- :large_yellow_circle: Changed
+- :red_circle: Removed
 
 ## Persistence
 

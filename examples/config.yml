@@ -1,17 +1,58 @@
+# Infralog configuration example
+# This file shows all available configuration options.
+
+# Polling configuration
 polling:
-  interval: 5
+  interval: 600  # Polling interval in seconds
+
+# Terraform state file location
 tfstate:
   s3:
-    bucket: "the-bucket"
-    key: "the-key"
-    region: "eu-west-1"
+    bucket: "my-terraform-state-bucket"
+    key: "path/to/terraform.tfstate"
+    region: "us-east-1"
+
+# Notification targets (configure one or both)
 target:
+  # Webhook target - sends JSON payload to an HTTP endpoint
   webhook:
-    url: "http://localhost:8080/infralog"
-    method: "POST"
+    url: "https://example.com/infralog"
+    method: "POST"  # POST or PUT (default: POST)
+    retry:
+      max_attempts: 3        # Number of retry attempts (default: 3)
+      initial_delay_ms: 1000 # Initial delay in milliseconds (default: 1000)
+      max_delay_ms: 30000    # Maximum delay in milliseconds (default: 30000)
+      retry_on_status:       # HTTP status codes that trigger a retry
+        - 500                # (default: [500, 502, 503, 504])
+        - 502
+        - 503
+        - 504
+
+  # Slack target - sends formatted messages to a Slack channel
+  slack:
+    webhook_url: "https://hooks.slack.com/services/T00/B00/XXX"
+    channel: "#infrastructure"  # Optional: override default channel
+    username: "Infralog"        # Optional: override bot username
+    icon_emoji: ":terraform:"   # Optional: override bot icon
+
+# Resource and output filtering
 filter:
+  # Optional: List of resource types to monitor.
+  # Omit to monitor all resources, or use [] to monitor none.
   resource_types:
     - "aws_instance"
     - "aws_s3_bucket"
+    - "aws_rds_cluster"
+    - "aws_lambda_function"
+
+  # Optional: List of outputs to monitor.
+  # Omit to monitor all outputs, or use [] to monitor none.
   outputs:
     - "instance_ip"
+    - "database_endpoint"
+
+# State persistence
+persistence:
+  # Optional: Path to persist the last-seen state.
+  # Enables change detection across restarts.
+  state_file: "/var/lib/infralog/state.json"
