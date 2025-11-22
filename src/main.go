@@ -35,7 +35,7 @@ func main() {
 
 	targets := []target.Target{}
 	if cfg.Target.Webhook.URL != "" {
-		webhookTarget, err := webhook.New(cfg.Target.Webhook.URL, cfg.Target.Webhook.Method)
+		webhookTarget, err := webhook.New(cfg.Target.Webhook)
 		if err != nil {
 			fmt.Printf("Error creating webhook target: %v\n", err)
 			os.Exit(1)

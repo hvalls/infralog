@@ -9,7 +9,7 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 - Monitors Terraform state files stored in S3
 - Detects resource and output changes with detailed diffs
 - Configurable polling intervals
-- Webhook notifications with JSON payloads
+- Webhook notifications with JSON payloads and automatic retries
 - Optional filtering by resource type and output name
 - State persistence to detect changes across restarts
 
@@ -53,6 +53,15 @@ target:
   webhook:
     url: "https://example.com/infralog"
     method: "POST"  # POST or PUT (default: POST)
+    retry:
+      max_attempts: 3        # Number of retry attempts (default: 3)
+      initial_delay_ms: 1000 # Initial delay in milliseconds (default: 1000)
+      max_delay_ms: 30000    # Maximum delay in milliseconds (default: 30000)
+      retry_on_status:       # HTTP status codes that trigger a retry
+        - 500                # (default: [500, 502, 503, 504])
+        - 502
+        - 503
+        - 504
 
 filter:
   # Optional: List of resource types to monitor.
@@ -118,6 +127,15 @@ When changes are detected, Infralog sends an HTTP request to the configured URL 
 ```
 
 The `status` field indicates the type of change: `added`, `changed`, or `removed`.
+
+#### Retry Behavior
+
+Webhook requests are automatically retried on transient failures:
+
+- Network errors trigger a retry
+- Configurable HTTP status codes trigger a retry (default: 500, 502, 503, 504)
+- Retries use exponential backoff with jitter to prevent thundering herd
+- Non-retryable errors (e.g., 400 Bad Request) fail immediately
 
 ## Persistence
 

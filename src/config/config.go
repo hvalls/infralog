@@ -19,10 +19,37 @@ type Config struct {
 }
 
 type Target struct {
-	Webhook struct {
-		URL    string `yaml:"url"`
-		Method string `yaml:"method"`
-	} `yaml:"webhook"`
+	Webhook WebhookConfig `yaml:"webhook"`
+}
+
+type WebhookConfig struct {
+	URL    string      `yaml:"url"`
+	Method string      `yaml:"method"`
+	Retry  RetryConfig `yaml:"retry"`
+}
+
+type RetryConfig struct {
+	MaxAttempts  int   `yaml:"max_attempts"`
+	InitialDelay int   `yaml:"initial_delay_ms"`
+	MaxDelay     int   `yaml:"max_delay_ms"`
+	StatusCodes  []int `yaml:"retry_on_status"`
+}
+
+// WithDefaults returns a RetryConfig with default values applied.
+func (r RetryConfig) WithDefaults() RetryConfig {
+	if r.MaxAttempts == 0 {
+		r.MaxAttempts = 3
+	}
+	if r.InitialDelay == 0 {
+		r.InitialDelay = 1000 // 1 second
+	}
+	if r.MaxDelay == 0 {
+		r.MaxDelay = 30000 // 30 seconds
+	}
+	if r.StatusCodes == nil {
+		r.StatusCodes = []int{500, 502, 503, 504}
+	}
+	return r
 }
 
 type Persistence struct {
