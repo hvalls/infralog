@@ -12,7 +12,8 @@ tfstate:
     key: "path/to/terraform.tfstate"
     region: "us-east-1"
 
-# Notification targets (configure one or both)
+# Notification targets (configure one or more)
+# If no targets are configured, stdout is used automatically
 target:
   # Webhook target - sends JSON payload to an HTTP endpoint
   webhook:
@@ -34,6 +35,12 @@ target:
     channel: "#infrastructure"  # Optional: override default channel
     username: "Infralog"        # Optional: override bot username
     icon_emoji: ":terraform:"   # Optional: override bot icon
+
+  # Stdout target - logs changes to console
+  # Useful for debugging, testing, or piping to other tools
+  stdout:
+    enabled: true
+    format: "text"  # "text" or "json" (default: "text")
 
 # Resource and output filtering
 filter:

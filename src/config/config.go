@@ -21,6 +21,12 @@ type Config struct {
 type Target struct {
 	Webhook WebhookConfig `yaml:"webhook"`
 	Slack   SlackConfig   `yaml:"slack"`
+	Stdout  StdoutConfig  `yaml:"stdout"`
+}
+
+type StdoutConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Format  string `yaml:"format"` // "json" or "text" (default: "text")
 }
 
 type SlackConfig struct {

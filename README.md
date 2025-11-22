@@ -11,6 +11,7 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 - Configurable polling intervals
 - Webhook notifications with JSON payloads and automatic retries
 - Slack notifications with formatted messages
+- Stdout logging with text or JSON format (default when no targets configured)
 - Optional filtering by resource type and output name
 - State persistence to detect changes across restarts
 
@@ -71,6 +72,12 @@ target:
     channel: "#infrastructure"  # Optional: override default channel
     username: "Infralog"        # Optional: override bot username
     icon_emoji: ":terraform:"   # Optional: override bot icon
+
+  # Stdout target (optional)
+  # If no targets are configured, stdout is used automatically
+  stdout:
+    enabled: true
+    format: "text"  # "text" or "json" (default: "text")
 
 filter:
   # Optional: List of resource types to monitor.
@@ -167,6 +174,36 @@ Status indicators:
 - :large_green_circle: Added
 - :large_yellow_circle: Changed
 - :red_circle: Removed
+
+### Stdout
+
+Logs changes to standard output. This is useful for debugging, testing, or piping output to other tools.
+
+**Automatic fallback**: If no targets are configured, stdout is used automatically with text format.
+
+Two formats are available:
+
+**Text format** (default):
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TERRAFORM STATE CHANGES DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Bucket: my-bucket
+  Key:    terraform.tfstate
+  Region: us-east-1
+──────────────────────────────────────────────────
+
+  RESOURCE CHANGES
+
+  [+] aws_instance.web (added)
+  [~] aws_rds_instance.db (changed)
+      instance_class: db.t2.micro → db.t2.small
+  [-] aws_s3_bucket.old (removed)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**JSON format**: Same structure as the webhook payload, useful for piping to `jq` or other tools.
 
 ## Persistence
 

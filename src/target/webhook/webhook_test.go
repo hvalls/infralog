@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"infralog/config"
+	"infralog/target"
 	"infralog/tfstate"
 	"net/http"
 	"net/http/httptest"
@@ -51,13 +52,13 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			target, err := New(tt.cfg)
+			wh, err := New(tt.cfg)
 
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected an error but got none")
 				}
-				if target != nil {
+				if wh != nil {
 					t.Error("Expected nil target but got a value")
 				}
 				if err.Error() != tt.errorMsg {
@@ -67,12 +68,12 @@ func TestNew(t *testing.T) {
 				if err != nil {
 					t.Errorf("Expected no error but got: %v", err)
 				}
-				if target == nil {
+				if wh == nil {
 					t.Error("Expected non-nil target but got nil")
 					return
 				}
-				if target.method != tt.expectedMethod {
-					t.Errorf("Expected Method %q but got %q", tt.expectedMethod, target.method)
+				if wh.method != tt.expectedMethod {
+					t.Errorf("Expected Method %q but got %q", tt.expectedMethod, wh.method)
 				}
 			}
 		})
@@ -85,15 +86,14 @@ func TestWrite_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.WebhookConfig{URL: server.URL, Method: "POST"})
+	wh, err := New(config.WebhookConfig{URL: server.URL, Method: "POST"})
 	if err != nil {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{}
-	tfs := config.TFState{}
+	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
 
-	if err := target.Write(diff, tfs); err != nil {
+	if err := wh.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
 }
@@ -104,15 +104,14 @@ func TestWrite_NonRetryableError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.WebhookConfig{URL: server.URL, Method: "POST"})
+	wh, err := New(config.WebhookConfig{URL: server.URL, Method: "POST"})
 	if err != nil {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{}
-	tfs := config.TFState{}
+	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
 
-	err = target.Write(diff, tfs)
+	err = wh.Write(payload)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}
@@ -131,7 +130,7 @@ func TestWrite_RetriesOnServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.WebhookConfig{
+	wh, err := New(config.WebhookConfig{
 		URL:    server.URL,
 		Method: "POST",
 		Retry: config.RetryConfig{
@@ -145,10 +144,9 @@ func TestWrite_RetriesOnServerError(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{}
-	tfs := config.TFState{}
+	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
 
-	if err := target.Write(diff, tfs); err != nil {
+	if err := wh.Write(payload); err != nil {
 		t.Errorf("Expected success after retries but got: %v", err)
 	}
 
@@ -166,7 +164,7 @@ func TestWrite_ExhaustsRetries(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.WebhookConfig{
+	wh, err := New(config.WebhookConfig{
 		URL:    server.URL,
 		Method: "POST",
 		Retry: config.RetryConfig{
@@ -180,10 +178,9 @@ func TestWrite_ExhaustsRetries(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{}
-	tfs := config.TFState{}
+	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
 
-	err = target.Write(diff, tfs)
+	err = wh.Write(payload)
 	if err == nil {
 		t.Error("Expected an error after exhausting retries")
 	}
@@ -194,7 +191,7 @@ func TestWrite_ExhaustsRetries(t *testing.T) {
 }
 
 func TestCalculateDelay(t *testing.T) {
-	target := &WebhookTarget{
+	wh := &WebhookTarget{
 		retry: config.RetryConfig{
 			InitialDelay: 1000,
 			MaxDelay:     30000,
@@ -202,9 +199,9 @@ func TestCalculateDelay(t *testing.T) {
 	}
 
 	// Test exponential growth (with some tolerance for jitter)
-	delay1 := target.calculateDelay(1)
-	delay2 := target.calculateDelay(2)
-	delay3 := target.calculateDelay(3)
+	delay1 := wh.calculateDelay(1)
+	delay2 := wh.calculateDelay(2)
+	delay3 := wh.calculateDelay(3)
 
 	// First delay should be around 1000ms (±25% jitter)
 	if delay1 < 750*1e6 || delay1 > 1250*1e6 {
@@ -223,7 +220,7 @@ func TestCalculateDelay(t *testing.T) {
 }
 
 func TestCalculateDelay_CappedAtMax(t *testing.T) {
-	target := &WebhookTarget{
+	wh := &WebhookTarget{
 		retry: config.RetryConfig{
 			InitialDelay: 1000,
 			MaxDelay:     5000,
@@ -232,7 +229,7 @@ func TestCalculateDelay_CappedAtMax(t *testing.T) {
 
 	// At attempt 10, exponential would be 1000 * 2^9 = 512000ms
 	// But should be capped at 5000ms (±25% jitter)
-	delay := target.calculateDelay(10)
+	delay := wh.calculateDelay(10)
 
 	if delay < 3750*1e6 || delay > 6250*1e6 {
 		t.Errorf("Delay %v should be capped around 5000ms (±25%%)", delay)
@@ -240,7 +237,7 @@ func TestCalculateDelay_CappedAtMax(t *testing.T) {
 }
 
 func TestShouldRetry(t *testing.T) {
-	target := &WebhookTarget{
+	wh := &WebhookTarget{
 		retry: config.RetryConfig{
 			StatusCodes: []int{500, 502, 503, 504},
 		},
@@ -261,7 +258,7 @@ func TestShouldRetry(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result := target.shouldRetry(tt.statusCode)
+		result := wh.shouldRetry(tt.statusCode)
 		if result != tt.expected {
 			t.Errorf("shouldRetry(%d) = %v, expected %v", tt.statusCode, result, tt.expected)
 		}

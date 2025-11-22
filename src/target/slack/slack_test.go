@@ -3,6 +3,7 @@ package slack
 import (
 	"encoding/json"
 	"infralog/config"
+	"infralog/target"
 	"infralog/tfstate"
 	"net/http"
 	"net/http/httptest"
@@ -79,7 +80,7 @@ func TestWrite_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.SlackConfig{WebhookURL: server.URL})
+	slackTarget, err := New(config.SlackConfig{WebhookURL: server.URL})
 	if err != nil {
 		t.Fatalf("Failed to create slack target: %v", err)
 	}
@@ -101,7 +102,8 @@ func TestWrite_Success(t *testing.T) {
 	tfs.S3.Key = "terraform.tfstate"
 	tfs.S3.Region = "us-east-1"
 
-	if err := target.Write(diff, tfs); err != nil {
+	payload := target.NewPayload(diff, tfs)
+	if err := slackTarget.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
 
@@ -122,7 +124,7 @@ func TestWrite_WithOptionalFields(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.SlackConfig{
+	slackTarget, err := New(config.SlackConfig{
 		WebhookURL: server.URL,
 		Channel:    "#alerts",
 		Username:   "Infralog Bot",
@@ -138,7 +140,8 @@ func TestWrite_WithOptionalFields(t *testing.T) {
 		},
 	}
 
-	if err := target.Write(diff, config.TFState{}); err != nil {
+	payload := target.NewPayload(diff, config.TFState{})
+	if err := slackTarget.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
 
@@ -159,14 +162,13 @@ func TestWrite_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	target, err := New(config.SlackConfig{WebhookURL: server.URL})
+	slackTarget, err := New(config.SlackConfig{WebhookURL: server.URL})
 	if err != nil {
 		t.Fatalf("Failed to create slack target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{}
-
-	err = target.Write(diff, config.TFState{})
+	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	err = slackTarget.Write(payload)
 	if err == nil {
 		t.Error("Expected an error but got none")
 	}

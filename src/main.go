@@ -8,6 +8,7 @@ import (
 	"infralog/persistence"
 	"infralog/target"
 	"infralog/target/slack"
+	"infralog/target/stdout"
 	"infralog/target/webhook"
 	"infralog/tfstate"
 	"infralog/ticker"
@@ -50,6 +51,15 @@ func main() {
 			os.Exit(1)
 		}
 		targets = append(targets, slackTarget)
+	}
+	if cfg.Target.Stdout.Enabled {
+		targets = append(targets, stdout.New(cfg.Target.Stdout))
+	}
+
+	// Fallback to stdout if no targets are configured
+	if len(targets) == 0 {
+		fmt.Println("No targets configured, using stdout as default")
+		targets = append(targets, stdout.New(config.StdoutConfig{Enabled: true, Format: "text"}))
 	}
 
 	var store persistence.Store
@@ -117,8 +127,9 @@ func main() {
 			return
 		}
 
+		payload := target.NewPayload(diff, cfg.TFState)
 		for _, t := range targets {
-			if err := t.Write(diff, cfg.TFState); err != nil {
+			if err := t.Write(payload); err != nil {
 				fmt.Printf("Error writing to target: %v\n", err)
 			}
 		}

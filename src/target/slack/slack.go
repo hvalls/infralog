@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"infralog/config"
+	"infralog/target"
 	"infralog/tfstate"
 	"net/http"
 	"strings"
@@ -48,8 +49,8 @@ func New(cfg config.SlackConfig) (*SlackTarget, error) {
 	}, nil
 }
 
-func (t *SlackTarget) Write(d *tfstate.StateDiff, tfs config.TFState) error {
-	msg := t.buildMessage(d, tfs)
+func (t *SlackTarget) Write(p *target.Payload) error {
+	msg := t.buildMessage(p)
 
 	jsonData, err := json.Marshal(msg)
 	if err != nil {
@@ -69,7 +70,7 @@ func (t *SlackTarget) Write(d *tfstate.StateDiff, tfs config.TFState) error {
 	return nil
 }
 
-func (t *SlackTarget) buildMessage(d *tfstate.StateDiff, tfs config.TFState) slackMessage {
+func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 	var blocks []block
 
 	// Header
@@ -81,9 +82,11 @@ func (t *SlackTarget) buildMessage(d *tfstate.StateDiff, tfs config.TFState) sla
 		},
 	})
 
-	// Context - state file info
-	stateInfo := fmt.Sprintf("*Bucket:* %s | *Key:* %s | *Region:* %s",
-		tfs.S3.Bucket, tfs.S3.Key, tfs.S3.Region)
+	// Context - state file info and timestamp
+	tfs := p.Metadata.TFState
+	stateInfo := fmt.Sprintf("*Bucket:* %s | *Key:* %s | *Region:* %s\n*Time:* %s",
+		tfs.S3.Bucket, tfs.S3.Key, tfs.S3.Region,
+		p.Metadata.Timestamp.Format("2006-01-02 15:04:05 UTC"))
 	blocks = append(blocks, block{
 		Type: "section",
 		Text: &textObject{
@@ -96,8 +99,8 @@ func (t *SlackTarget) buildMessage(d *tfstate.StateDiff, tfs config.TFState) sla
 	blocks = append(blocks, block{Type: "divider"})
 
 	// Resource changes
-	if len(d.ResourceDiffs) > 0 {
-		resourceText := t.formatResourceDiffs(d.ResourceDiffs)
+	if len(p.Diffs.ResourceDiffs) > 0 {
+		resourceText := t.formatResourceDiffs(p.Diffs.ResourceDiffs)
 		blocks = append(blocks, block{
 			Type: "section",
 			Text: &textObject{
@@ -108,8 +111,8 @@ func (t *SlackTarget) buildMessage(d *tfstate.StateDiff, tfs config.TFState) sla
 	}
 
 	// Output changes
-	if len(d.OutputDiffs) > 0 {
-		outputText := t.formatOutputDiffs(d.OutputDiffs)
+	if len(p.Diffs.OutputDiffs) > 0 {
+		outputText := t.formatOutputDiffs(p.Diffs.OutputDiffs)
 		blocks = append(blocks, block{
 			Type: "section",
 			Text: &textObject{
@@ -120,7 +123,7 @@ func (t *SlackTarget) buildMessage(d *tfstate.StateDiff, tfs config.TFState) sla
 	}
 
 	msg := slackMessage{
-		Text:   t.buildFallbackText(d),
+		Text:   t.buildFallbackText(p.Diffs),
 		Blocks: blocks,
 	}
 

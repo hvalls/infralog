@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"infralog/config"
-	"infralog/tfstate"
+	"infralog/target"
 	"math"
 	"math/rand"
 	"net/http"
@@ -35,10 +35,10 @@ func New(cfg config.WebhookConfig) (*WebhookTarget, error) {
 	}, nil
 }
 
-func (t *WebhookTarget) Write(d *tfstate.StateDiff, tfs config.TFState) error {
-	jsonData, err := getJSONBody(d, tfs)
+func (t *WebhookTarget) Write(p *target.Payload) error {
+	jsonData, err := json.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("error marshaling webhook body: %w", err)
 	}
 
 	var lastErr error
@@ -109,27 +109,4 @@ func (t *WebhookTarget) calculateDelay(attempt int) time.Duration {
 	delay := backoff + jitter
 
 	return time.Duration(delay) * time.Millisecond
-}
-
-func getJSONBody(d *tfstate.StateDiff, tfs config.TFState) ([]byte, error) {
-	body := struct {
-		Diffs    *tfstate.StateDiff `json:"diffs"`
-		Metadata struct {
-			TFState config.TFState `json:"tfstate"`
-		} `json:"metadata"`
-	}{
-		Diffs: d,
-		Metadata: struct {
-			TFState config.TFState `json:"tfstate"`
-		}{
-			TFState: tfs,
-		},
-	}
-
-	jsonData, err := json.Marshal(body)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling webhook body: %w", err)
-	}
-
-	return jsonData, nil
 }
