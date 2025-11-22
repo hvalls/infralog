@@ -131,6 +131,7 @@ When changes are detected, Infralog sends an HTTP request to the configured URL 
     ]
   },
   "metadata": {
+    "timestamp": "2024-01-15T10:30:00Z",
     "tfstate": {
       "s3": {
         "bucket": "my-terraform-state-bucket",
@@ -170,11 +171,6 @@ Messages include:
 - Resource changes with color-coded status indicators
 - Output changes with before/after values
 
-Status indicators:
-- :large_green_circle: Added
-- :large_yellow_circle: Changed
-- :red_circle: Removed
-
 ### Stdout
 
 Logs changes to standard output. This is useful for debugging, testing, or piping output to other tools.
@@ -188,6 +184,7 @@ Two formats are available:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   TERRAFORM STATE CHANGES DETECTED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Time:   2024-01-15 10:30:00 UTC
   Bucket: my-bucket
   Key:    terraform.tfstate
   Region: us-east-1
