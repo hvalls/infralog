@@ -14,6 +14,7 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 - Stdout logging with text or JSON format (default when no targets configured)
 - Optional filtering by resource type and output name
 - State persistence to detect changes across restarts
+- Prometheus metrics endpoint for monitoring
 
 ## Installation
 
@@ -41,7 +42,8 @@ go build -o infralog main.go
 ### Running with Docker
 
 ```bash
-docker run -v /path/to/config.yml:/etc/infralog/config.yml:ro \
+docker run -p 8080:8080 \
+  -v /path/to/config.yml:/etc/infralog/config.yml:ro \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   infralog:latest
@@ -50,10 +52,13 @@ docker run -v /path/to/config.yml:/etc/infralog/config.yml:ro \
 For local backend with Docker:
 
 ```bash
-docker run -v /path/to/config.yml:/etc/infralog/config.yml:ro \
+docker run -p 8080:8080 \
+  -v /path/to/config.yml:/etc/infralog/config.yml:ro \
   -v /path/to/terraform.tfstate:/data/terraform.tfstate:ro \
   infralog:latest
 ```
+
+The `-p 8080:8080` flag exposes the Prometheus metrics endpoint (when enabled in config).
 
 Using docker-compose:
 
@@ -136,6 +141,10 @@ persistence:
   # Optional: Path to persist the last-seen state.
   # Enables change detection across restarts.
   state_file: "/var/lib/infralog/state.json"
+
+metrics:
+  enabled: true
+  address: ":8080"  # Address to expose /metrics endpoint
 ```
 
 ## Backends
@@ -284,6 +293,40 @@ To enable change detection across restarts, configure the `persistence.state_fil
 - Changes that occurred while Infralog was stopped are detected and emitted
 
 State files are written atomically to prevent corruption.
+
+## Metrics
+
+Infralog exposes Prometheus metrics at `/metrics` when enabled. This allows you to monitor polling status, change detection, and notification delivery.
+
+### Configuration
+
+```yaml
+metrics:
+  enabled: true
+  address: ":8080"  # Default address
+```
+
+### Available Metrics
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `infralog_changes_total` | Counter | `type`, `resource_type` | Total infrastructure changes detected |
+| `infralog_poll_errors_total` | Counter | `stage` | Polling errors (stage: fetch, parse, compare) |
+| `infralog_last_successful_poll_timestamp` | Gauge | - | Unix timestamp of last successful poll |
+| `infralog_notifications_sent_total` | Counter | `target` | Successful notifications by target |
+| `infralog_notification_errors_total` | Counter | `target` | Failed notifications by target |
+
+### Running with Docker
+
+When running with Docker, expose the metrics port:
+
+```bash
+docker run -p 8080:8080 \
+  -v /path/to/config.yml:/etc/infralog/config.yml:ro \
+  infralog:latest
+```
+
+Then access metrics at `http://localhost:8080/metrics`.
 
 ## Contributing
 

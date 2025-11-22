@@ -1,6 +1,9 @@
 package ticker
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Ticker struct {
 	interval time.Duration
@@ -12,9 +15,17 @@ func NewTicker(interval int) *Ticker {
 	}
 }
 
-func (t *Ticker) Start(task func()) {
+// Start runs the task at each interval until the context is cancelled.
+func (t *Ticker) Start(ctx context.Context, task func()) {
 	ticker := time.NewTicker(t.interval)
-	for range ticker.C {
-		task()
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			task()
+		}
 	}
 }

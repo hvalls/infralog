@@ -12,10 +12,24 @@ type Config struct {
 	Polling struct {
 		Interval int `yaml:"interval"`
 	} `yaml:"polling"`
-	TFState     TFState     `yaml:"tfstate"`
-	Target      Target      `yaml:"target"`
-	Filter      Filter      `yaml:"filter"`
-	Persistence Persistence `yaml:"persistence"`
+	TFState     TFState       `yaml:"tfstate"`
+	Target      Target        `yaml:"target"`
+	Filter      Filter        `yaml:"filter"`
+	Persistence Persistence   `yaml:"persistence"`
+	Metrics     MetricsConfig `yaml:"metrics"`
+}
+
+type MetricsConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Address string `yaml:"address"`
+}
+
+// WithDefaults returns a MetricsConfig with default values applied.
+func (m MetricsConfig) WithDefaults() MetricsConfig {
+	if m.Address == "" {
+		m.Address = ":8080"
+	}
+	return m
 }
 
 type Target struct {

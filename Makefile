@@ -73,6 +73,7 @@ docker-build: ## Build Docker image
 
 docker-run: docker-build ## Build and run Docker container with local test config
 	docker run --rm \
+		-p 8080:8080 \
 		-v $(PWD)/examples/local-test/config-docker.yml:/etc/infralog/config.yml:ro \
 		-v $(PWD)/examples/local-test:/data:ro \
 		$(DOCKER_IMAGE):$(DOCKER_TAG)

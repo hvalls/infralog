@@ -69,3 +69,8 @@ persistence:
   # Optional: Path to persist the last-seen state.
   # Enables change detection across restarts.
   state_file: "/var/lib/infralog/state.json"
+
+# Prometheus metrics
+metrics:
+  enabled: true
+  address: ":8080"  # Address to expose /metrics endpoint (default: ":8080")

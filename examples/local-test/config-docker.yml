@@ -11,7 +11,11 @@ tfstate:
 target:
   stdout:
     enabled: true
-    format: "text"
+    format: "json"
 
 persistence:
   state_file: "/var/lib/infralog/state.json"
+
+metrics:
+  enabled: true
+  address: ":8080"
