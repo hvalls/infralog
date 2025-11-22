@@ -11,7 +11,7 @@ docker run -p 8080:8080 \
   -v /path/to/config.yml:/etc/infralog/config.yml:ro \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  infralog:latest
+  hvalls/infralog:latest
 ```
 
 For local backend with Docker:
@@ -20,7 +20,7 @@ For local backend with Docker:
 docker run -p 8080:8080 \
   -v /path/to/config.yml:/etc/infralog/config.yml:ro \
   -v /path/to/terraform.tfstate:/data/terraform.tfstate:ro \
-  infralog:latest
+  hvalls/infralog:latest
 ```
 
 The `-p 8080:8080` flag exposes the Prometheus metrics endpoint (when enabled in config).

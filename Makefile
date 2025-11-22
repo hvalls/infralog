@@ -1,10 +1,10 @@
-.PHONY: build run test lint clean docker-build docker-run docker-compose-up help
+.PHONY: build run test lint clean docker-build docker-run docker-push docker-release docker-compose-up help
 
 # Variables
 BINARY_NAME := infralog
 SRC_DIR := src
 BUILD_DIR := bin
-DOCKER_IMAGE := infralog
+DOCKER_IMAGE := hvalls/infralog
 DOCKER_TAG := latest
 
 # Go parameters
@@ -77,6 +77,14 @@ docker-run: docker-build ## Build and run Docker container with local test confi
 		-v $(PWD)/examples/local-test/config-docker.yml:/etc/infralog/config.yml:ro \
 		-v $(PWD)/examples/local-test:/data:ro \
 		$(DOCKER_IMAGE):$(DOCKER_TAG)
+
+docker-push: docker-build ## Push Docker image to Docker Hub
+	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
+
+docker-release: ## Build and push a versioned release (usage: make docker-release DOCKER_TAG=v1.0.0)
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -t $(DOCKER_IMAGE):latest .
+	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
+	docker push $(DOCKER_IMAGE):latest
 
 docker-compose-up: ## Run with docker-compose
 	docker-compose up --build

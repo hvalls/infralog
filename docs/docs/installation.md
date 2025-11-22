@@ -7,6 +7,12 @@ sidebar_position: 2
 ## Docker
 
 ```bash
+docker pull hvalls/infralog:latest
+```
+
+Or build locally:
+
+```bash
 docker build -t infralog:latest .
 ```
 
