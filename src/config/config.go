@@ -12,14 +12,21 @@ type Config struct {
 	Polling struct {
 		Interval int `yaml:"interval"`
 	} `yaml:"polling"`
-	TFState TFState `yaml:"tfstate"`
-	Target  struct {
-		Webhook struct {
-			URL    string `yaml:"url"`
-			Method string `yaml:"method"`
-		} `yaml:"webhook"`
-	} `yaml:"target"`
-	Filter Filter `yaml:"filter"`
+	TFState     TFState     `yaml:"tfstate"`
+	Target      Target      `yaml:"target"`
+	Filter      Filter      `yaml:"filter"`
+	Persistence Persistence `yaml:"persistence"`
+}
+
+type Target struct {
+	Webhook struct {
+		URL    string `yaml:"url"`
+		Method string `yaml:"method"`
+	} `yaml:"webhook"`
+}
+
+type Persistence struct {
+	StateFile string `yaml:"state_file"`
 }
 
 type TFState struct {

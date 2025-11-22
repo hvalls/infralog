@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"infralog/backend/s3"
 	"infralog/config"
+	"infralog/persistence"
 	"infralog/target"
 	"infralog/target/webhook"
 	"infralog/tfstate"
@@ -42,16 +43,43 @@ func main() {
 		targets = append(targets, webhookTarget)
 	}
 
-	initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
-	if err != nil {
-		fmt.Printf("Error getting initial state: %v\n", err)
-		os.Exit(1)
+	var store persistence.Store
+	if cfg.Persistence.StateFile != "" {
+		store, err = persistence.NewFileStore(cfg.Persistence.StateFile)
+		if err != nil {
+			fmt.Printf("Error creating persistence store: %v\n", err)
+			os.Exit(1)
+		}
+
+		tfstate.LastState, err = store.Load()
+		if err != nil {
+			fmt.Printf("Error loading persisted state: %v\n", err)
+			os.Exit(1)
+		}
+
+		if tfstate.LastState != nil {
+			fmt.Println("Loaded persisted state")
+		}
 	}
 
-	tfstate.LastState, err = tfstate.ParseState(string(initialStateData))
-	if err != nil {
-		fmt.Printf("Error parsing initial state: %v\n", err)
-		os.Exit(1)
+	if tfstate.LastState == nil {
+		initialStateData, err := s3.GetObject(cfg.TFState.S3.Bucket, cfg.TFState.S3.Key, cfg.TFState.S3.Region)
+		if err != nil {
+			fmt.Printf("Error getting initial state: %v\n", err)
+			os.Exit(1)
+		}
+
+		tfstate.LastState, err = tfstate.ParseState(string(initialStateData))
+		if err != nil {
+			fmt.Printf("Error parsing initial state: %v\n", err)
+			os.Exit(1)
+		}
+
+		if store != nil {
+			if err := store.Save(tfstate.LastState); err != nil {
+				fmt.Printf("Warning: failed to persist initial state: %v\n", err)
+			}
+		}
 	}
 
 	t := ticker.NewTicker(cfg.Polling.Interval)
@@ -87,5 +115,11 @@ func main() {
 		}
 
 		tfstate.LastState = currentState
+
+		if store != nil {
+			if err := store.Save(currentState); err != nil {
+				fmt.Printf("Warning: failed to persist state: %v\n", err)
+			}
+		}
 	})
 }
