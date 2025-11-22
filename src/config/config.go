@@ -43,6 +43,11 @@ type StdoutConfig struct {
 	Format  string `yaml:"format"` // "json" or "text" (default: "text")
 }
 
+// IsJSON returns true if the stdout format is set to JSON.
+func (s StdoutConfig) IsJSON() bool {
+	return s.Enabled && s.Format == "json"
+}
+
 type SlackConfig struct {
 	WebhookURL string `yaml:"webhook_url"`
 	Channel    string `yaml:"channel"`    // Optional: override default channel

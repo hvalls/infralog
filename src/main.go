@@ -22,8 +22,19 @@ import (
 	"time"
 )
 
+// quietMode suppresses operational messages when stdout target uses JSON format.
+var quietMode bool
+
+// logInfo prints a message only if not in quiet mode.
+func logInfo(format string, args ...any) {
+	if !quietMode {
+		fmt.Printf(format+"\n", args...)
+	}
+}
+
 func main() {
 	cfg := loadConfig()
+	quietMode = cfg.Target.Stdout.IsJSON()
 
 	targets := initTargets(cfg)
 	store := initPersistence(cfg)
@@ -37,7 +48,7 @@ func main() {
 	runPollingLoop(ctx, cfg, stateBackend, targets, store)
 
 	shutdownMetricsServer(metricsServer)
-	fmt.Println("Shutdown complete")
+	logInfo("Shutdown complete")
 }
 
 // loadConfig parses CLI flags and loads the configuration file.
@@ -92,7 +103,7 @@ func initTargets(cfg *config.Config) []target.Target {
 	}
 
 	if len(targets) == 0 {
-		fmt.Println("No targets configured, using stdout as default")
+		logInfo("No targets configured, using stdout as default")
 		targets = append(targets, stdout.New(config.StdoutConfig{Enabled: true, Format: "text"}))
 	}
 
@@ -118,7 +129,7 @@ func initPersistence(cfg *config.Config) persistence.Store {
 	}
 
 	if tfstate.LastState != nil {
-		fmt.Println("Loaded persisted state")
+		logInfo("Loaded persisted state")
 	}
 
 	return store
@@ -129,11 +140,11 @@ func initBackend(cfg *config.Config) backend.Backend {
 	switch {
 	case cfg.TFState.Local.Path != "":
 		b := local.New(cfg.TFState.Local)
-		fmt.Printf("Using %s backend\n", b.Name())
+		logInfo("Using %s backend", b.Name())
 		return b
 	case cfg.TFState.S3.Bucket != "":
 		b := s3.New(cfg.TFState.S3)
-		fmt.Printf("Using %s backend\n", b.Name())
+		logInfo("Using %s backend", b.Name())
 		return b
 	default:
 		fmt.Println("Error: no backend configured. Configure either tfstate.s3 or tfstate.local")
@@ -181,7 +192,7 @@ func startMetricsServer(cfg *config.Config) *metrics.Server {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Metrics server started on %s\n", metricsCfg.Address)
+	logInfo("Metrics server started on %s", metricsCfg.Address)
 	return server
 }
 
@@ -194,7 +205,7 @@ func setupSignalHandler() context.Context {
 
 	go func() {
 		sig := <-sigChan
-		fmt.Printf("\nReceived signal %v, shutting down...\n", sig)
+		logInfo("\nReceived signal %v, shutting down...", sig)
 		cancel()
 	}()
 
@@ -211,7 +222,7 @@ func runPollingLoop(ctx context.Context, cfg *config.Config, stateBackend backen
 
 // handlePoll fetches current state, compares with last state, and notifies targets.
 func handlePoll(cfg *config.Config, stateBackend backend.Backend, targets []target.Target, store persistence.Store) {
-	fmt.Println("Polling...")
+	logInfo("Polling...")
 
 	currentState, err := fetchAndParseState(stateBackend)
 	if err != nil {
