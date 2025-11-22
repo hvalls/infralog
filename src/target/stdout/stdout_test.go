@@ -64,8 +64,20 @@ func TestWriteJSON(t *testing.T) {
 				ResourceName: "web",
 				Status:       tfstate.DiffStatusChanged,
 				AttributeDiffs: map[string]tfstate.ValueDiff{
-					"instance_type": {OldValue: "t2.micro", NewValue: "t2.small"},
+					"instance_type": {Before: "t2.micro", After: "t2.small"},
 				},
+			},
+			{
+				ResourceType: "aws_s3_bucket",
+				ResourceName: "data",
+				Status:       tfstate.DiffStatusAdded,
+			},
+		},
+		OutputDiffs: []tfstate.OutputDiff{
+			{
+				OutputName: "endpoint",
+				Status:     tfstate.DiffStatusChanged,
+				ValueDiff:  tfstate.ValueDiff{Before: "old.example.com", After: "new.example.com"},
 			},
 		},
 	}
@@ -80,19 +92,57 @@ func TestWriteJSON(t *testing.T) {
 	}
 
 	output := buf.String()
+	lines := strings.Split(strings.TrimSpace(output), "\n")
 
-	// Verify it's valid JSON
-	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
-		t.Errorf("Output is not valid JSON: %v", err)
+	// Should have 3 lines: 2 resource changes + 1 output change
+	if len(lines) != 3 {
+		t.Errorf("Expected 3 JSON lines, got %d", len(lines))
 	}
 
-	// Verify structure
-	if _, ok := parsed["diffs"]; !ok {
-		t.Error("Expected 'diffs' in output")
+	// Verify each line is valid JSON with expected structure
+	for i, line := range lines {
+		var entry LogEntry
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			t.Errorf("Line %d is not valid JSON: %v", i, err)
+			continue
+		}
+
+		// Verify common fields
+		if entry.Level != "info" {
+			t.Errorf("Line %d: expected level 'info', got %q", i, entry.Level)
+		}
+		if entry.Source != "s3://my-bucket/terraform.tfstate" {
+			t.Errorf("Line %d: expected source 's3://my-bucket/terraform.tfstate', got %q", i, entry.Source)
+		}
+		if entry.Timestamp.IsZero() {
+			t.Errorf("Line %d: timestamp should not be zero", i)
+		}
 	}
-	if _, ok := parsed["metadata"]; !ok {
-		t.Error("Expected 'metadata' in output")
+
+	// Verify first line (resource changed)
+	var first LogEntry
+	json.Unmarshal([]byte(lines[0]), &first)
+	if first.EventType != "resource_change" {
+		t.Errorf("Expected event_type 'resource_change', got %q", first.EventType)
+	}
+	if first.ResourceType != "aws_instance" {
+		t.Errorf("Expected resource_type 'aws_instance', got %q", first.ResourceType)
+	}
+	if first.Status != "changed" {
+		t.Errorf("Expected status 'changed', got %q", first.Status)
+	}
+	if first.Changes == nil || first.Changes["instance_type"].Before != "t2.micro" {
+		t.Error("Expected changes with instance_type before value")
+	}
+
+	// Verify third line (output changed)
+	var third LogEntry
+	json.Unmarshal([]byte(lines[2]), &third)
+	if third.EventType != "output_change" {
+		t.Errorf("Expected event_type 'output_change', got %q", third.EventType)
+	}
+	if third.OutputName != "endpoint" {
+		t.Errorf("Expected output_name 'endpoint', got %q", third.OutputName)
 	}
 }
 
@@ -117,7 +167,7 @@ func TestWriteText(t *testing.T) {
 				ResourceName: "db",
 				Status:       tfstate.DiffStatusChanged,
 				AttributeDiffs: map[string]tfstate.ValueDiff{
-					"instance_class": {OldValue: "db.t2.micro", NewValue: "db.t2.small"},
+					"instance_class": {Before: "db.t2.micro", After: "db.t2.small"},
 				},
 			},
 		},
@@ -125,7 +175,7 @@ func TestWriteText(t *testing.T) {
 			{
 				OutputName: "endpoint",
 				Status:     tfstate.DiffStatusChanged,
-				ValueDiff:  tfstate.ValueDiff{OldValue: "old.example.com", NewValue: "new.example.com"},
+				ValueDiff:  tfstate.ValueDiff{Before: "old.example.com", After: "new.example.com"},
 			},
 		},
 	}

@@ -152,7 +152,7 @@ func (t *SlackTarget) formatResourceDiffs(diffs []tfstate.ResourceDiff) string {
 		if len(diff.AttributeDiffs) > 0 && diff.Status == tfstate.DiffStatusChanged {
 			for attr, valueDiff := range diff.AttributeDiffs {
 				sb.WriteString(fmt.Sprintf("    • `%s`: `%v` → `%v`\n",
-					attr, valueDiff.OldValue, valueDiff.NewValue))
+					attr, valueDiff.Before, valueDiff.After))
 			}
 		}
 	}
@@ -171,7 +171,7 @@ func (t *SlackTarget) formatOutputDiffs(diffs []tfstate.OutputDiff) string {
 
 		if diff.Status == tfstate.DiffStatusChanged {
 			sb.WriteString(fmt.Sprintf("    • `%v` → `%v`\n",
-				diff.ValueDiff.OldValue, diff.ValueDiff.NewValue))
+				diff.ValueDiff.Before, diff.ValueDiff.After))
 		}
 	}
 

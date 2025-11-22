@@ -121,13 +121,13 @@ func compareInstances(oldInstances, newInstances []ResourceInstance) map[string]
 			newVal, newExists := newAttrs[key]
 
 			if !oldExists {
-				attrDiffs[key] = ValueDiff{NewValue: newVal}
+				attrDiffs[key] = ValueDiff{After: newVal}
 			} else if !newExists {
-				attrDiffs[key] = ValueDiff{OldValue: oldVal}
+				attrDiffs[key] = ValueDiff{Before: oldVal}
 			} else if !reflect.DeepEqual(oldVal, newVal) {
 				attrDiffs[key] = ValueDiff{
-					OldValue: oldVal,
-					NewValue: newVal,
+					Before: oldVal,
+					After:  newVal,
 				}
 			}
 		}
@@ -175,8 +175,8 @@ func compareOutputs(oldOutputs, newOutputs map[string]Output) []OutputDiff {
 		if !reflect.DeepEqual(oldOutput.Value, newOutput.Value) {
 			outputDiff.Status = DiffStatusChanged
 			outputDiff.ValueDiff = ValueDiff{
-				OldValue: oldOutput.Value,
-				NewValue: newOutput.Value,
+				Before: oldOutput.Value,
+				After:  newOutput.Value,
 			}
 			outputDiffs = append(outputDiffs, outputDiff)
 		}

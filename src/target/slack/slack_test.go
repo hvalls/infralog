@@ -92,7 +92,7 @@ func TestWrite_Success(t *testing.T) {
 				ResourceName: "web",
 				Status:       tfstate.DiffStatusChanged,
 				AttributeDiffs: map[string]tfstate.ValueDiff{
-					"instance_type": {OldValue: "t2.micro", NewValue: "t2.small"},
+					"instance_type": {Before: "t2.micro", After: "t2.small"},
 				},
 			},
 		},
@@ -244,7 +244,7 @@ func TestFormatResourceDiffs(t *testing.T) {
 			ResourceName: "web",
 			Status:       tfstate.DiffStatusChanged,
 			AttributeDiffs: map[string]tfstate.ValueDiff{
-				"instance_type": {OldValue: "t2.micro", NewValue: "t2.small"},
+				"instance_type": {Before: "t2.micro", After: "t2.small"},
 			},
 		},
 		{

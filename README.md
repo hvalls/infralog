@@ -193,8 +193,8 @@ When changes are detected, Infralog sends an HTTP request to the configured URL 
         "status": "changed",
         "attribute_diffs": {
           "instance_type": {
-            "old_value": "t2.small",
-            "new_value": "t2.medium"
+            "before": "t2.small",
+            "after": "t2.medium"
           }
         }
       }
@@ -204,8 +204,8 @@ When changes are detected, Infralog sends an HTTP request to the configured URL 
         "output_name": "instance_ip",
         "status": "changed",
         "value_diff": {
-          "old_value": "10.0.1.20",
-          "new_value": "10.0.1.28"
+          "before": "10.0.1.20",
+          "after": "10.0.1.28"
         }
       }
     ]
@@ -249,7 +249,7 @@ Messages include:
 - Header with "Terraform State Changes Detected"
 - State file location (bucket, key, region)
 - Resource changes with color-coded status indicators
-- Output changes with before/after values
+- Output changes with `before`/`after` values
 
 ### Stdout
 
@@ -280,7 +280,30 @@ Two formats are available:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**JSON format**: Same structure as the webhook payload, useful for piping to `jq` or other tools.
+**JSON format**: Emits one JSON line per change, optimized for log aggregation tools like Loki, Elasticsearch, or Splunk:
+
+```json
+{"timestamp":"2024-01-15T10:30:00Z","level":"info","msg":"resource added","event_type":"resource_change","source":"s3://my-bucket/terraform.tfstate","resource_type":"aws_instance","resource_name":"web","status":"added"}
+{"timestamp":"2024-01-15T10:30:00Z","level":"info","msg":"resource changed","event_type":"resource_change","source":"s3://my-bucket/terraform.tfstate","resource_type":"aws_rds_instance","resource_name":"db","status":"changed","changes":{"instance_class":{"before":"db.t2.micro","after":"db.t2.small"}}}
+{"timestamp":"2024-01-15T10:30:00Z","level":"info","msg":"output changed","event_type":"output_change","source":"s3://my-bucket/terraform.tfstate","output_name":"endpoint","status":"changed","changes":{"value":{"before":"old.example.com","after":"new.example.com"}}}
+```
+
+Each line is a valid JSON object with the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `timestamp` | ISO 8601 UTC timestamp |
+| `level` | Log level (always "info") |
+| `msg` | Human-readable message (e.g., "resource added") |
+| `event_type` | Either "resource_change" or "output_change" |
+| `source` | State file location (e.g., "s3://bucket/key" or "file://path") |
+| `resource_type` | Terraform resource type (for resource changes) |
+| `resource_name` | Terraform resource name (for resource changes) |
+| `output_name` | Terraform output name (for output changes) |
+| `status` | Change status: "added", "changed", or "removed" |
+| `changes` | Attribute changes with `before`/`after` values (only for "changed" status) |
+
+When using JSON format, operational messages (like "Polling...") are suppressed to keep the output clean for log ingestion.
 
 ## Persistence
 

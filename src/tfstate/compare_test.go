@@ -52,8 +52,8 @@ func TestCompareInstances(t *testing.T) {
 			},
 			want: map[string]ValueDiff{
 				"type": {
-					OldValue: "t2.micro",
-					NewValue: "t2.small",
+					Before: "t2.micro",
+					After: "t2.small",
 				},
 			},
 		},
@@ -76,7 +76,7 @@ func TestCompareInstances(t *testing.T) {
 			},
 			want: map[string]ValueDiff{
 				"type": {
-					NewValue: "t2.micro",
+					After: "t2.micro",
 				},
 			},
 		},
@@ -99,7 +99,7 @@ func TestCompareInstances(t *testing.T) {
 			},
 			want: map[string]ValueDiff{
 				"type": {
-					OldValue: "t2.micro",
+					Before: "t2.micro",
 				},
 			},
 		},
@@ -159,8 +159,8 @@ func TestCompareOutputs(t *testing.T) {
 					OutputName: "vpc_id",
 					Status:     DiffStatusChanged,
 					ValueDiff: ValueDiff{
-						OldValue: "vpc-123456",
-						NewValue: "vpc-654321",
+						Before: "vpc-123456",
+						After: "vpc-654321",
 					},
 				},
 			},

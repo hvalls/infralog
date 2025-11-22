@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
@@ -19,6 +20,26 @@ const (
 type StdoutTarget struct {
 	format string
 	writer io.Writer
+}
+
+// LogEntry represents a single log line for JSON output.
+type LogEntry struct {
+	Timestamp    time.Time              `json:"timestamp"`
+	Level        string                 `json:"level"`
+	Msg          string                 `json:"msg"`
+	EventType    string                 `json:"event_type"`
+	Source       string                 `json:"source"`
+	ResourceType string                 `json:"resource_type,omitempty"`
+	ResourceName string                 `json:"resource_name,omitempty"`
+	OutputName   string                 `json:"output_name,omitempty"`
+	Status       string                 `json:"status"`
+	Changes      map[string]ValueChange `json:"changes,omitempty"`
+}
+
+// ValueChange represents a before/after value pair.
+type ValueChange struct {
+	Before any `json:"before,omitempty"`
+	After  any `json:"after,omitempty"`
 }
 
 func New(cfg config.StdoutConfig) *StdoutTarget {
@@ -41,13 +62,81 @@ func (t *StdoutTarget) Write(p *target.Payload) error {
 }
 
 func (t *StdoutTarget) writeJSON(p *target.Payload) error {
-	jsonData, err := json.MarshalIndent(p, "", "  ")
-	if err != nil {
-		return fmt.Errorf("error marshaling output: %w", err)
+	source := buildSource(p.Metadata.TFState)
+	ts := p.Metadata.Timestamp
+
+	for _, diff := range p.Diffs.ResourceDiffs {
+		entry := LogEntry{
+			Timestamp:    ts,
+			Level:        "info",
+			Msg:          "resource " + string(diff.Status),
+			EventType:    "resource_change",
+			Source:       source,
+			ResourceType: diff.ResourceType,
+			ResourceName: diff.ResourceName,
+			Status:       string(diff.Status),
+		}
+
+		if len(diff.AttributeDiffs) > 0 {
+			entry.Changes = make(map[string]ValueChange)
+			for attr, vd := range diff.AttributeDiffs {
+				entry.Changes[attr] = ValueChange{
+					Before: vd.Before,
+					After:  vd.After,
+				}
+			}
+		}
+
+		if err := t.writeLogEntry(entry); err != nil {
+			return err
+		}
 	}
 
+	for _, diff := range p.Diffs.OutputDiffs {
+		entry := LogEntry{
+			Timestamp:  ts,
+			Level:      "info",
+			Msg:        "output " + string(diff.Status),
+			EventType:  "output_change",
+			Source:     source,
+			OutputName: diff.OutputName,
+			Status:     string(diff.Status),
+		}
+
+		if diff.Status == tfstate.DiffStatusChanged {
+			entry.Changes = map[string]ValueChange{
+				"value": {
+					Before: diff.ValueDiff.Before,
+					After:  diff.ValueDiff.After,
+				},
+			}
+		}
+
+		if err := t.writeLogEntry(entry); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *StdoutTarget) writeLogEntry(entry LogEntry) error {
+	jsonData, err := json.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("error marshaling log entry: %w", err)
+	}
 	fmt.Fprintln(t.writer, string(jsonData))
 	return nil
+}
+
+func buildSource(tfs config.TFState) string {
+	if tfs.S3.Bucket != "" {
+		return fmt.Sprintf("s3://%s/%s", tfs.S3.Bucket, tfs.S3.Key)
+	}
+	if tfs.Local.Path != "" {
+		return "file://" + tfs.Local.Path
+	}
+	return ""
 }
 
 func (t *StdoutTarget) writeText(p *target.Payload) error {
@@ -75,7 +164,7 @@ func (t *StdoutTarget) writeText(p *target.Payload) error {
 			if len(diff.AttributeDiffs) > 0 && diff.Status == tfstate.DiffStatusChanged {
 				for attr, valueDiff := range diff.AttributeDiffs {
 					sb.WriteString(fmt.Sprintf("      %s: %v → %v\n",
-						attr, valueDiff.OldValue, valueDiff.NewValue))
+						attr, valueDiff.Before, valueDiff.After))
 				}
 			}
 		}
@@ -90,7 +179,7 @@ func (t *StdoutTarget) writeText(p *target.Payload) error {
 
 			if diff.Status == tfstate.DiffStatusChanged {
 				sb.WriteString(fmt.Sprintf("      %v → %v\n",
-					diff.ValueDiff.OldValue, diff.ValueDiff.NewValue))
+					diff.ValueDiff.Before, diff.ValueDiff.After))
 			}
 		}
 	}

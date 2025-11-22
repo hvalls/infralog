@@ -23,8 +23,8 @@ type OutputDiff struct {
 type ResourceDiffStatus string
 
 type ValueDiff struct {
-	OldValue any `json:"old_value,omitempty"`
-	NewValue any `json:"new_value,omitempty"`
+	Before any `json:"before,omitempty"`
+	After  any `json:"after,omitempty"`
 }
 
 type StateDiff struct {
