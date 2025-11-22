@@ -17,6 +17,18 @@ Infralog monitors Terraform state files and emits resource-level events when cha
 
 ## Installation
 
+### Docker
+
+```bash
+docker pull ghcr.io/hvalls/infralog:latest
+```
+
+Or build locally:
+
+```bash
+docker build -t infralog:latest .
+```
+
 ### Building from Source
 
 ```bash
@@ -25,6 +37,31 @@ go build -o infralog main.go
 ```
 
 ## Usage
+
+### Running with Docker
+
+```bash
+docker run -v /path/to/config.yml:/etc/infralog/config.yml:ro \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  infralog:latest
+```
+
+For local backend with Docker:
+
+```bash
+docker run -v /path/to/config.yml:/etc/infralog/config.yml:ro \
+  -v /path/to/terraform.tfstate:/data/terraform.tfstate:ro \
+  infralog:latest
+```
+
+Using docker-compose:
+
+```bash
+docker-compose up
+```
+
+### Running from Binary
 
 Specify the configuration file using either the `--config-file` flag or the `INFRALOG_CONFIG_FILE` environment variable:
 

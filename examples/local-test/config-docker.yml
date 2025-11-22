@@ -1,0 +1,17 @@
+# Infralog Docker test configuration
+# Use this with docker-compose for local testing
+
+polling:
+  interval: 5  # Poll every 5 seconds for quick testing
+
+tfstate:
+  local:
+    path: "/data/terraform.tfstate"
+
+target:
+  stdout:
+    enabled: true
+    format: "text"
+
+persistence:
+  state_file: "/var/lib/infralog/state.json"

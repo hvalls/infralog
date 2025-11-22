@@ -1,3 +1,5 @@
 config.test.yml
 infralog
 CLAUDE.md
+src/coverage.html
+src/coverage.out

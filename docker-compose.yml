@@ -1,0 +1,21 @@
+services:
+  infralog:
+    build: .
+    image: infralog:latest
+    volumes:
+      # Mount config file
+      - ./examples/local-test/config-docker.yml:/etc/infralog/config.yml:ro
+      # Mount state file for local backend testing
+      - ./examples/local-test:/data:ro
+      # Optional: persist infralog state across restarts
+      - infralog-state:/var/lib/infralog
+    environment:
+      - INFRALOG_CONFIG_FILE=/etc/infralog/config.yml
+      # For S3 backend, pass AWS credentials:
+      # - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      # - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      # - AWS_REGION=${AWS_REGION}
+    restart: unless-stopped
+
+volumes:
+  infralog-state:

@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Examples (not needed in image)
+examples/
+
+# Build artifacts
+bin/
+*.exe
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+.dockerignore
