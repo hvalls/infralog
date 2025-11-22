@@ -86,12 +86,6 @@ docker-release: ## Build and push a versioned release (usage: make docker-releas
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 	docker push $(DOCKER_IMAGE):latest
 
-docker-compose-up: ## Run with docker-compose
-	docker-compose up --build
-
-docker-compose-down: ## Stop docker-compose
-	docker-compose down
-
 ## Local Testing
 
 simulate: ## Run the state change simulator

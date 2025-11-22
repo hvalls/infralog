@@ -25,12 +25,6 @@ docker run -p 8080:8080 \
 
 The `-p 8080:8080` flag exposes the Prometheus metrics endpoint (when enabled in config).
 
-Using docker-compose:
-
-```bash
-docker-compose up
-```
-
 ## Running from Binary
 
 Specify the configuration file using either the `--config-file` flag or the `INFRALOG_CONFIG_FILE` environment variable:

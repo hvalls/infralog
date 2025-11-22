@@ -1,5 +1,4 @@
 # Infralog Docker test configuration
-# Use this with docker-compose for local testing
 
 polling:
   interval: 5  # Poll every 5 seconds for quick testing
