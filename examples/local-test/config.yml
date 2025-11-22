@@ -1,0 +1,14 @@
+# Infralog local test configuration
+# Use this with the simulate-changes.sh script to test change detection
+
+polling:
+  interval: 5  # Poll every 5 seconds for quick testing
+
+tfstate:
+  local:
+    path: "./examples/local-test/terraform.tfstate"
+
+target:
+  stdout:
+    enabled: true
+    format: "text"  # Use "json" for JSON output
