@@ -4,7 +4,12 @@ sidebar_position: 4
 
 # Configuration
 
-Infralog uses a YAML configuration file to specify notification targets and filters. The configuration file is **optional** - if not provided, Infralog will output a simple summary with no filtering.
+Infralog supports two configuration methods: YAML configuration files and environment variables. Both methods are **optional** - if not provided, Infralog will output a simple summary with no filtering.
+
+**Environment variables take precedence over config file values**, allowing you to:
+- Use config files for defaults
+- Override specific values via environment variables in CI/CD
+- Run without a config file using only environment variables
 
 ## Configuration File Structure
 
@@ -47,6 +52,45 @@ filter:
   outputs:
     - "instance_ip"
     - "database_endpoint"
+```
+
+## Environment Variables
+
+All configuration options can be set via environment variables with the `INFRALOG_` prefix. The variable name follows the config file structure in uppercase with underscores.
+
+**Format:** `INFRALOG_<SECTION>_<SUBSECTION>_<KEY>`
+
+### Available Environment Variables
+
+#### Webhook Target
+
+```bash
+# Basic webhook configuration
+export INFRALOG_TARGET_WEBHOOK_URL="https://example.com/webhook"
+export INFRALOG_TARGET_WEBHOOK_METHOD="POST"
+
+# Webhook retry configuration
+export INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS=3
+export INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS=1000
+export INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS=30000
+export INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS="500,502,503,504"
+```
+
+#### Slack Target
+
+```bash
+export INFRALOG_TARGET_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/xxx"
+export INFRALOG_TARGET_SLACK_CHANNEL="#infrastructure"
+export INFRALOG_TARGET_SLACK_USERNAME="infralog-bot"
+export INFRALOG_TARGET_SLACK_ICON_EMOJI=":robot:"
+```
+
+#### Filters
+
+```bash
+# Comma-separated lists for array values
+export INFRALOG_FILTER_RESOURCE_TYPES="aws_instance,aws_s3_bucket,aws_vpc"
+export INFRALOG_FILTER_OUTPUTS="public_ip,vpc_id"
 ```
 
 ## Targets
@@ -174,6 +218,20 @@ filter:
 No config file needed - shows simple summary:
 
 ```bash
+infralog -f plan.json
+```
+
+### Environment Variables Only
+
+Run without a config file using only environment variables:
+
+```bash
+# Configure via environment variables
+export INFRALOG_TARGET_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXX"
+export INFRALOG_TARGET_SLACK_CHANNEL="#infrastructure"
+export INFRALOG_FILTER_RESOURCE_TYPES="aws_instance,aws_s3_bucket"
+
+# Run without config file
 infralog -f plan.json
 ```
 

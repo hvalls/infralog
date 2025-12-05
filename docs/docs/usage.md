@@ -25,6 +25,14 @@ With a custom configuration file:
 infralog -f plan.json --config-file config.yml
 ```
 
+Or using environment variables (recommended for CI/CD):
+
+```bash
+export INFRALOG_TARGET_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXX"
+export INFRALOG_FILTER_RESOURCE_TYPES="aws_instance,aws_s3_bucket"
+infralog -f plan.json
+```
+
 ## CLI Flags
 
 - `--plan-file` or `-f` (required): Path to Terraform plan JSON file
@@ -46,6 +54,16 @@ docker run -v $(pwd)/plan.json:/plan.json:ro \
            -v $(pwd)/config.yml:/config.yml:ro \
            hvalls/infralog:latest \
            -f /plan.json --config-file /config.yml
+```
+
+Or use environment variables instead of a config file:
+
+```bash
+docker run -v $(pwd)/plan.json:/plan.json:ro \
+           -e INFRALOG_TARGET_SLACK_WEBHOOK_URL="https://hooks.slack.com/..." \
+           -e INFRALOG_FILTER_RESOURCE_TYPES="aws_instance,aws_s3_bucket" \
+           hvalls/infralog:latest \
+           -f /plan.json
 ```
 
 ## Output Formats
@@ -141,3 +159,17 @@ target:
 ```bash
 infralog -f plan.json --config-file config.yml
 ```
+
+### Using Environment Variables in CI/CD
+
+```bash
+# GitHub Actions, GitLab CI, etc.
+export INFRALOG_TARGET_WEBHOOK_URL="https://api.example.com/webhook"
+export INFRALOG_TARGET_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXX"
+export INFRALOG_FILTER_RESOURCE_TYPES="aws_instance,aws_rds_instance"
+
+terraform show -json plan.tfplan > plan.json
+infralog -f plan.json  # No config file needed
+```
+
+See [Configuration](./configuration.md#environment-variables) for all available environment variables.
