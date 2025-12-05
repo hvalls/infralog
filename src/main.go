@@ -1,69 +1,83 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
-	"infralog/backend"
-	"infralog/backend/local"
-	"infralog/backend/s3"
 	"infralog/config"
-	"infralog/metrics"
-	"infralog/persistence"
 	"infralog/target"
 	"infralog/target/slack"
-	"infralog/target/stdout"
 	"infralog/target/webhook"
-	"infralog/tfstate"
-	"infralog/ticker"
+	"infralog/tfplan"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"sort"
 )
 
-// quietMode suppresses operational messages when stdout target uses JSON format.
-var quietMode bool
-
-// logInfo prints a message only if not in quiet mode.
-func logInfo(format string, args ...any) {
-	if !quietMode {
-		fmt.Printf(format+"\n", args...)
-	}
-}
-
 func main() {
-	cfg := loadConfig()
-	quietMode = cfg.Target.Stdout.IsJSON()
-
-	targets := initTargets(cfg)
-	store := initPersistence(cfg)
-	stateBackend := initBackend(cfg)
-
-	initState(stateBackend, store)
-
-	metricsServer := startMetricsServer(cfg)
-	ctx := setupSignalHandler()
-
-	runPollingLoop(ctx, cfg, stateBackend, targets, store)
-
-	shutdownMetricsServer(metricsServer)
-	logInfo("Shutdown complete")
-}
-
-// loadConfig parses CLI flags and loads the configuration file.
-func loadConfig() *config.Config {
-	configFile := flag.String("config-file", "", "Path to configuration file")
+	// Parse CLI flags
+	planFile := flag.String("plan-file", "", "Path to Terraform plan JSON file (required)")
+	planFileShort := flag.String("f", "", "Path to Terraform plan JSON file (shorthand)")
+	configFile := flag.String("config-file", "", "Path to configuration file (optional)")
 	flag.Parse()
 
-	configPath := os.Getenv("INFRALOG_CONFIG_FILE")
-	if *configFile != "" {
-		configPath = *configFile
+	// Determine plan file (prefer -f, then --plan-file)
+	plan := *planFileShort
+	if plan == "" {
+		plan = *planFile
 	}
 
-	if configPath == "" {
-		fmt.Println("Error: config file must be provided via --config-file or INFRALOG_CONFIG_FILE")
+	if plan == "" {
+		fmt.Println("Error: --plan-file or -f is required")
+		fmt.Println("\nUsage: infralog -f <plan.json> [--config-file <config.yml>]")
+		fmt.Println("\nExample:")
+		fmt.Println("  terraform show -json plan.tfplan > plan.json")
+		fmt.Println("  infralog -f plan.json --config-file config.yml")
 		os.Exit(1)
+	}
+
+	// Load configuration (optional)
+	cfg := loadConfig(*configFile)
+
+	// Initialize targets
+	targets := initTargets(cfg)
+
+	// Parse plan file
+	terraformPlan, err := tfplan.ParsePlanFile(plan)
+	if err != nil {
+		fmt.Printf("Error parsing plan file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Apply filters to plan
+	filteredPlan := tfplan.ApplyFilter(terraformPlan, cfg.Filter)
+
+	// Exit early if no changes
+	if !filteredPlan.HasChanges() {
+		fmt.Println("No changes detected in plan")
+		os.Exit(0)
+	}
+
+	// Notify targets
+	hasNotificationTargets := len(targets) > 0
+	if err := notifyTargets(targets, filteredPlan, plan); err != nil {
+		fmt.Fprintf(os.Stderr, "Error notifying targets: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Print output based on whether notification targets exist
+	if hasNotificationTargets {
+		printNotificationSummary(filteredPlan, targets)
+	} else {
+		printDetailedSummary(filteredPlan, plan)
+	}
+
+	os.Exit(0)
+}
+
+// loadConfig loads the configuration file if provided, otherwise returns empty config.
+func loadConfig(configPath string) *config.Config {
+	if configPath == "" {
+		// No config provided - use defaults (empty filter matches all)
+		return &config.Config{}
 	}
 
 	cfg, err := config.LoadConfig(configPath)
@@ -76,14 +90,13 @@ func loadConfig() *config.Config {
 }
 
 // initTargets creates notification targets based on configuration.
-// Falls back to stdout if no targets are configured.
 func initTargets(cfg *config.Config) []target.Target {
 	var targets []target.Target
 
 	if cfg.Target.Webhook.URL != "" {
 		t, err := webhook.New(cfg.Target.Webhook)
 		if err != nil {
-			fmt.Printf("Error creating webhook target: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error creating webhook target: %v\n", err)
 			os.Exit(1)
 		}
 		targets = append(targets, t)
@@ -92,237 +105,118 @@ func initTargets(cfg *config.Config) []target.Target {
 	if cfg.Target.Slack.WebhookURL != "" {
 		t, err := slack.New(cfg.Target.Slack)
 		if err != nil {
-			fmt.Printf("Error creating slack target: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error creating slack target: %v\n", err)
 			os.Exit(1)
 		}
 		targets = append(targets, t)
 	}
 
-	if cfg.Target.Stdout.Enabled {
-		targets = append(targets, stdout.New(cfg.Target.Stdout))
-	}
-
-	if len(targets) == 0 {
-		logInfo("No targets configured, using stdout as default")
-		targets = append(targets, stdout.New(config.StdoutConfig{Enabled: true, Format: "text"}))
-	}
-
 	return targets
 }
 
-// initPersistence sets up the state persistence store if configured.
-func initPersistence(cfg *config.Config) persistence.Store {
-	if cfg.Persistence.StateFile == "" {
-		return nil
+// notifyTargets sends the plan to all configured targets.
+func notifyTargets(targets []target.Target, plan *tfplan.Plan, planFile string) error {
+	payload := target.NewPayload(plan)
+
+	var hasError bool
+	for _, t := range targets {
+		if err := t.Write(payload); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing to target: %v\n", err)
+			hasError = true
+		}
 	}
 
-	store, err := persistence.NewFileStore(cfg.Persistence.StateFile)
-	if err != nil {
-		fmt.Printf("Error creating persistence store: %v\n", err)
-		os.Exit(1)
+	if hasError {
+		return fmt.Errorf("one or more targets failed")
 	}
 
-	tfstate.LastState, err = store.Load()
-	if err != nil {
-		fmt.Printf("Error loading persisted state: %v\n", err)
-		os.Exit(1)
-	}
-
-	if tfstate.LastState != nil {
-		logInfo("Loaded persisted state")
-	}
-
-	return store
+	return nil
 }
 
-// initBackend creates the Terraform state backend (S3 or local).
-func initBackend(cfg *config.Config) backend.Backend {
-	switch {
-	case cfg.TFState.Local.Path != "":
-		b := local.New(cfg.TFState.Local)
-		logInfo("Using %s backend", b.Name())
-		return b
-	case cfg.TFState.S3.Bucket != "":
-		b := s3.New(cfg.TFState.S3)
-		logInfo("Using %s backend", b.Name())
-		return b
-	default:
-		fmt.Println("Error: no backend configured. Configure either tfstate.s3 or tfstate.local")
-		os.Exit(1)
-		return nil
-	}
-}
+// printDetailedSummary prints a detailed summary for local usage (no notification targets).
+func printDetailedSummary(plan *tfplan.Plan, planFile string) {
+	resourceCount := len(plan.ResourceChanges)
+	outputCount := len(plan.OutputChanges)
 
-// initState loads the initial Terraform state if not already loaded from persistence.
-func initState(stateBackend backend.Backend, store persistence.Store) {
-	if tfstate.LastState != nil {
-		return
+	fmt.Printf("✓ Plan analyzed: %d resource(s) changed, %d output(s) changed\n",
+		resourceCount, outputCount)
+
+	if resourceCount > 0 {
+		for _, rc := range plan.ResourceChanges {
+			symbol := actionSymbol(rc.Change.Actions)
+			fmt.Printf("  %s %s.%s\n", symbol, rc.Type, rc.Name)
+		}
 	}
 
-	stateData, err := stateBackend.GetState()
-	if err != nil {
-		fmt.Printf("Error getting initial state: %v\n", err)
-		os.Exit(1)
-	}
+	if outputCount > 0 {
+		// Sort output names for consistent display
+		names := make([]string, 0, len(plan.OutputChanges))
+		for name := range plan.OutputChanges {
+			names = append(names, name)
+		}
+		sort.Strings(names)
 
-	tfstate.LastState, err = tfstate.ParseState(string(stateData))
-	if err != nil {
-		fmt.Printf("Error parsing initial state: %v\n", err)
-		os.Exit(1)
-	}
-
-	if store != nil {
-		if err := store.Save(tfstate.LastState); err != nil {
-			fmt.Printf("Warning: failed to persist initial state: %v\n", err)
+		for _, name := range names {
+			oc := plan.OutputChanges[name]
+			symbol := actionSymbol(oc.Change.Actions)
+			fmt.Printf("  %s output.%s\n", symbol, name)
 		}
 	}
 }
 
-// startMetricsServer starts the Prometheus metrics server if enabled.
-func startMetricsServer(cfg *config.Config) *metrics.Server {
-	if !cfg.Metrics.Enabled {
-		return nil
-	}
+// printNotificationSummary prints a minimal summary when notification targets exist.
+func printNotificationSummary(plan *tfplan.Plan, targets []target.Target) {
+	resourceCount := len(plan.ResourceChanges)
+	outputCount := len(plan.OutputChanges)
 
-	metricsCfg := cfg.Metrics.WithDefaults()
-	server := metrics.NewServer(metricsCfg.Address)
-
-	if err := server.Start(); err != nil {
-		fmt.Printf("Error starting metrics server: %v\n", err)
-		os.Exit(1)
-	}
-
-	logInfo("Metrics server started on %s", metricsCfg.Address)
-	return server
-}
-
-// setupSignalHandler creates a context that cancels on SIGINT or SIGTERM.
-func setupSignalHandler() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		sig := <-sigChan
-		logInfo("\nReceived signal %v, shutting down...", sig)
-		cancel()
-	}()
-
-	return ctx
-}
-
-// runPollingLoop starts the ticker and handles state polling.
-func runPollingLoop(ctx context.Context, cfg *config.Config, stateBackend backend.Backend, targets []target.Target, store persistence.Store) {
-	t := ticker.NewTicker(cfg.Polling.Interval)
-	t.Start(ctx, func() {
-		handlePoll(cfg, stateBackend, targets, store)
-	})
-}
-
-// handlePoll fetches current state, compares with last state, and notifies targets.
-func handlePoll(cfg *config.Config, stateBackend backend.Backend, targets []target.Target, store persistence.Store) {
-	logInfo("Polling...")
-
-	currentState, err := fetchAndParseState(stateBackend)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-
-	diff, err := tfstate.Compare(tfstate.LastState, currentState, cfg.Filter)
-	if err != nil {
-		fmt.Printf("Failed to compare states: %v\n", err)
-		metrics.RecordPollError("compare")
-		return
-	}
-
-	metrics.RecordPollSuccess()
-
-	if !diff.HasChanges() {
-		return
-	}
-
-	recordChangeMetrics(diff)
-	notifyTargets(targets, diff, cfg)
-
-	tfstate.LastState = currentState
-	persistState(store, currentState)
-}
-
-// fetchAndParseState retrieves and parses the current Terraform state.
-func fetchAndParseState(stateBackend backend.Backend) (*tfstate.State, error) {
-	stateData, err := stateBackend.GetState()
-	if err != nil {
-		metrics.RecordPollError("fetch")
-		return nil, fmt.Errorf("getting state: %w", err)
-	}
-
-	state, err := tfstate.ParseState(string(stateData))
-	if err != nil {
-		metrics.RecordPollError("parse")
-		return nil, fmt.Errorf("parsing state: %w", err)
-	}
-
-	return state, nil
-}
-
-// recordChangeMetrics records metrics for each resource change.
-func recordChangeMetrics(diff *tfstate.StateDiff) {
-	for _, rd := range diff.ResourceDiffs {
-		metrics.RecordChange(string(rd.Status), rd.ResourceType)
-	}
-}
-
-// notifyTargets sends the diff to all configured targets.
-func notifyTargets(targets []target.Target, diff *tfstate.StateDiff, cfg *config.Config) {
-	payload := target.NewPayload(diff, cfg.TFState)
+	fmt.Printf("✓ Plan analyzed: %d resource(s) changed, %d output(s) changed\n",
+		resourceCount, outputCount)
 
 	for _, t := range targets {
-		name := getTargetName(t)
-		if err := t.Write(payload); err != nil {
-			fmt.Printf("Error writing to target: %v\n", err)
-			metrics.RecordNotificationError(name)
-		} else {
-			metrics.RecordNotificationSuccess(name)
+		fmt.Printf("✓ %s notification sent\n", targetName(t))
+	}
+}
+
+// actionSymbol returns a symbol for the given action list.
+func actionSymbol(actions []string) string {
+	if len(actions) == 0 {
+		return "[?]"
+	}
+
+	// Sort for consistent comparison
+	sorted := make([]string, len(actions))
+	copy(sorted, actions)
+	sort.Strings(sorted)
+
+	if len(sorted) == 1 {
+		switch sorted[0] {
+		case "create":
+			return "[+]"
+		case "delete":
+			return "[-]"
+		case "update":
+			return "[~]"
+		default:
+			return "[?]"
 		}
 	}
+
+	// Multiple actions (e.g., replace: create + delete)
+	if len(sorted) == 2 && sorted[0] == "create" && sorted[1] == "delete" {
+		return "[~]"
+	}
+
+	return "[~]"
 }
 
-// persistState saves the current state to disk if persistence is configured.
-func persistState(store persistence.Store, state *tfstate.State) {
-	if store == nil {
-		return
-	}
-	if err := store.Save(state); err != nil {
-		fmt.Printf("Warning: failed to persist state: %v\n", err)
-	}
-}
-
-// shutdownMetricsServer gracefully stops the metrics server.
-func shutdownMetricsServer(server *metrics.Server) {
-	if server == nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		fmt.Printf("Error shutting down metrics server: %v\n", err)
-	}
-}
-
-// getTargetName returns a string identifier for the target type.
-func getTargetName(t target.Target) string {
+// targetName returns a human-readable name for the target.
+func targetName(t target.Target) string {
 	switch t.(type) {
 	case *webhook.WebhookTarget:
-		return "webhook"
+		return "Webhook"
 	case *slack.SlackTarget:
-		return "slack"
-	case *stdout.StdoutTarget:
-		return "stdout"
+		return "Slack"
 	default:
-		return "unknown"
+		return "Target"
 	}
 }

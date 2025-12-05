@@ -1,0 +1,20 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.old",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "old",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "instance_type": "t2.micro",
+          "ami": "ami-12345678"
+        },
+        "after": null
+      }
+    }
+  ]
+}

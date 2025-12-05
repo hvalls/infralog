@@ -1,0 +1,111 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.7",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web_server",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web_server",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "instance_type": "t2.micro",
+          "tags": {
+            "Name": "web-server",
+            "Environment": "staging"
+          },
+          "monitoring": false
+        },
+        "after": {
+          "instance_type": "t2.small",
+          "tags": {
+            "Name": "web-server",
+            "Environment": "production"
+          },
+          "monitoring": true
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.app_data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "app_data",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "versioning": {
+            "enabled": false
+          },
+          "logging": null
+        },
+        "after": {
+          "versioning": {
+            "enabled": true
+          },
+          "logging": {
+            "target_bucket": "logs-bucket",
+            "target_prefix": "s3-access-logs/"
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_security_group.old_sg",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "old_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "name": "old-security-group",
+          "description": "Deprecated security group",
+          "ingress": [
+            {
+              "from_port": 22,
+              "to_port": 22,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        },
+        "after": null
+      }
+    },
+    {
+      "address": "aws_iam_role.app_role",
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "name": "app_role",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "name": "app-role-old",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+        },
+        "after": {
+          "name": "app-role-new",
+          "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+        }
+      }
+    }
+  ],
+  "output_changes": {
+    "instance_type": {
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "value": "t2.micro"
+        },
+        "after": {
+          "value": "t2.small"
+        }
+      }
+    }
+  }
+}

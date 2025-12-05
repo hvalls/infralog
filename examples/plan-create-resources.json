@@ -1,0 +1,114 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.7",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web_server",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web_server",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t2.micro",
+          "availability_zone": "us-east-1a",
+          "tags": {
+            "Name": "web-server",
+            "Environment": "production",
+            "ManagedBy": "terraform"
+          },
+          "vpc_security_group_ids": ["sg-12345678"],
+          "subnet_id": "subnet-abcdef12"
+        },
+        "after_unknown": {
+          "id": true,
+          "public_ip": true,
+          "private_ip": true
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.app_data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "app_data",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "bucket": "my-app-data-bucket-prod",
+          "acl": "private",
+          "tags": {
+            "Name": "Application Data",
+            "Environment": "production"
+          },
+          "versioning": {
+            "enabled": true
+          }
+        }
+      }
+    },
+    {
+      "address": "aws_security_group.web_sg",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web_sg",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "web-security-group",
+          "description": "Security group for web servers",
+          "vpc_id": "vpc-12345678",
+          "ingress": [
+            {
+              "from_port": 80,
+              "to_port": 80,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            },
+            {
+              "from_port": 443,
+              "to_port": 443,
+              "protocol": "tcp",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ],
+          "egress": [
+            {
+              "from_port": 0,
+              "to_port": 0,
+              "protocol": "-1",
+              "cidr_blocks": ["0.0.0.0/0"]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "output_changes": {
+    "instance_public_ip": {
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "value": "computed"
+        }
+      }
+    },
+    "bucket_name": {
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "value": "my-app-data-bucket-prod"
+        }
+      }
+    }
+  }
+}

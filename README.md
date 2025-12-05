@@ -1,33 +1,47 @@
 # Infralog
 
-> **Warning**: This project is in early development. The API and features are subject to change.
-
-Infralog monitors Terraform state files and emits resource-level events when changes are detected. It polls your state file at configurable intervals, detects additions, modifications, and deletions, and delivers change notifications to configured targets.
-
-## Features
-
-- Monitors Terraform state files from multiple backends (S3, local filesystem)
-- Detects resource and output changes with detailed diffs
-- Webhook and Slack notifications
-- Optional filtering by resource type and output name
-- State persistence to detect changes across restarts
-- Prometheus metrics endpoint
-
-## Documentation
-
-Full documentation is available at **[hvalls.github.io/infralog](https://hvalls.github.io/infralog/)**
+Analyze Terraform plan files and send notifications about infrastructure changes. Perfect for CI/CD pipelines.
 
 ## Quick Start
 
 ```bash
-# Build
+# Generate and convert plan
+terraform plan -out=plan.tfplan
+terraform show -json plan.tfplan > plan.json
+
+# Analyze the plan
+infralog -f plan.json
+```
+
+## Features
+
+- Analyzes Terraform plan JSON files
+- Sends notifications to Webhook and Slack
+- Filters by resource type and output name
+- Lightweight single binary
+
+## Documentation
+
+**[hvalls.github.io/infralog](https://hvalls.github.io/infralog/)**
+
+## Installation
+
+```bash
+# Build from source
 cd src/
 go build -o infralog main.go
+```
 
-# Run
-./infralog --config-file config.yml
+## Usage
+
+```bash
+# Basic usage
+infralog -f plan.json
+
+# With configuration
+infralog -f plan.json --config-file config.yml
 ```
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License

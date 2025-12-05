@@ -3,7 +3,7 @@ package webhook
 import (
 	"infralog/config"
 	"infralog/target"
-	"infralog/tfstate"
+	"infralog/tfplan"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -91,7 +91,7 @@ func TestWrite_Success(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	payload := target.NewPayload(&tfplan.Plan{})
 
 	if err := wh.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
@@ -109,7 +109,7 @@ func TestWrite_NonRetryableError(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	payload := target.NewPayload(&tfplan.Plan{})
 
 	err = wh.Write(payload)
 	if err == nil {
@@ -144,7 +144,7 @@ func TestWrite_RetriesOnServerError(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	payload := target.NewPayload(&tfplan.Plan{})
 
 	if err := wh.Write(payload); err != nil {
 		t.Errorf("Expected success after retries but got: %v", err)
@@ -178,7 +178,7 @@ func TestWrite_ExhaustsRetries(t *testing.T) {
 		t.Fatalf("Failed to create webhook target: %v", err)
 	}
 
-	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	payload := target.NewPayload(&tfplan.Plan{})
 
 	err = wh.Write(payload)
 	if err == nil {

@@ -1,0 +1,59 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.0",
+  "resource_changes": [
+    {
+      "address": "aws_instance.new",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "new",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {"instance_type": "t2.micro"}
+      }
+    },
+    {
+      "address": "aws_instance.updated",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "updated",
+      "change": {
+        "actions": ["update"],
+        "before": {"instance_type": "t2.micro"},
+        "after": {"instance_type": "t2.small"}
+      }
+    },
+    {
+      "address": "aws_instance.removed",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "removed",
+      "change": {
+        "actions": ["delete"],
+        "before": {"instance_type": "t2.micro"},
+        "after": null
+      }
+    },
+    {
+      "address": "aws_s3_bucket.data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "data",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {"bucket": "my-bucket"}
+      }
+    }
+  ],
+  "output_changes": {
+    "instance_ip": {
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {"value": "192.168.1.1"}
+      }
+    }
+  }
+}

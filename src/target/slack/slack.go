@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"infralog/config"
 	"infralog/target"
-	"infralog/tfstate"
+	"infralog/tfplan"
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -78,20 +79,17 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 		Type: "header",
 		Text: &textObject{
 			Type: "plain_text",
-			Text: "Terraform State Changes Detected",
+			Text: "Terraform Plan Changes",
 		},
 	})
 
-	// Context - state file info and timestamp
-	tfs := p.Metadata.TFState
-	stateInfo := fmt.Sprintf("*Bucket:* %s | *Key:* %s | *Region:* %s\n*Time:* %s",
-		tfs.S3.Bucket, tfs.S3.Key, tfs.S3.Region,
-		p.Metadata.Timestamp.Format("2006-01-02 15:04:05 UTC"))
+	// Context - timestamp
+	timeInfo := fmt.Sprintf("*Time:* %s", p.Datetime.Format("2006-01-02 15:04:05 UTC"))
 	blocks = append(blocks, block{
 		Type: "section",
 		Text: &textObject{
 			Type: "mrkdwn",
-			Text: stateInfo,
+			Text: timeInfo,
 		},
 	})
 
@@ -99,8 +97,8 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 	blocks = append(blocks, block{Type: "divider"})
 
 	// Resource changes
-	if len(p.Diffs.ResourceDiffs) > 0 {
-		resourceText := t.formatResourceDiffs(p.Diffs.ResourceDiffs)
+	if len(p.Plan.ResourceChanges) > 0 {
+		resourceText := t.formatResourceChanges(p.Plan.ResourceChanges)
 		blocks = append(blocks, block{
 			Type: "section",
 			Text: &textObject{
@@ -111,8 +109,8 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 	}
 
 	// Output changes
-	if len(p.Diffs.OutputDiffs) > 0 {
-		outputText := t.formatOutputDiffs(p.Diffs.OutputDiffs)
+	if len(p.Plan.OutputChanges) > 0 {
+		outputText := t.formatOutputChanges(p.Plan.OutputChanges)
 		blocks = append(blocks, block{
 			Type: "section",
 			Text: &textObject{
@@ -123,7 +121,7 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 	}
 
 	msg := slackMessage{
-		Text:   t.buildFallbackText(p.Diffs),
+		Text:   t.buildFallbackText(p.Plan),
 		Blocks: blocks,
 	}
 
@@ -140,19 +138,29 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 	return msg
 }
 
-func (t *SlackTarget) formatResourceDiffs(diffs []tfstate.ResourceDiff) string {
+func (t *SlackTarget) formatResourceChanges(changes []tfplan.ResourceChange) string {
 	var sb strings.Builder
 	sb.WriteString("*Resource Changes*\n\n")
 
-	for _, diff := range diffs {
-		emoji := statusEmoji(string(diff.Status))
+	for _, rc := range changes {
+		status := actionsToStatus(rc.Change.Actions)
+		emoji := statusEmoji(status)
 		sb.WriteString(fmt.Sprintf("%s `%s.%s` - %s\n",
-			emoji, diff.ResourceType, diff.ResourceName, diff.Status))
+			emoji, rc.Type, rc.Name, status))
 
-		if len(diff.AttributeDiffs) > 0 && diff.Status == tfstate.DiffStatusChanged {
-			for attr, valueDiff := range diff.AttributeDiffs {
+		// Show changed attributes for updates
+		if status == "changed" || status == "replaced" {
+			changes := extractChanges(rc.Change.Before, rc.Change.After)
+			// Limit to first 5 changed attributes to avoid excessive Slack message length
+			count := 0
+			for attr, change := range changes {
+				if count >= 5 {
+					sb.WriteString(fmt.Sprintf("    • _...and %d more attributes_\n", len(changes)-5))
+					break
+				}
 				sb.WriteString(fmt.Sprintf("    • `%s`: `%v` → `%v`\n",
-					attr, valueDiff.Before, valueDiff.After))
+					attr, change.Before, change.After))
+				count++
 			}
 		}
 	}
@@ -160,27 +168,36 @@ func (t *SlackTarget) formatResourceDiffs(diffs []tfstate.ResourceDiff) string {
 	return sb.String()
 }
 
-func (t *SlackTarget) formatOutputDiffs(diffs []tfstate.OutputDiff) string {
+func (t *SlackTarget) formatOutputChanges(changes map[string]tfplan.OutputChange) string {
 	var sb strings.Builder
 	sb.WriteString("*Output Changes*\n\n")
 
-	for _, diff := range diffs {
-		emoji := statusEmoji(string(diff.Status))
-		sb.WriteString(fmt.Sprintf("%s `%s` - %s\n",
-			emoji, diff.OutputName, diff.Status))
+	// Sort output names for consistent ordering
+	names := make([]string, 0, len(changes))
+	for name := range changes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 
-		if diff.Status == tfstate.DiffStatusChanged {
+	for _, name := range names {
+		oc := changes[name]
+		status := actionsToStatus(oc.Change.Actions)
+		emoji := statusEmoji(status)
+		sb.WriteString(fmt.Sprintf("%s `%s` - %s\n",
+			emoji, name, status))
+
+		if status == "changed" || status == "replaced" {
 			sb.WriteString(fmt.Sprintf("    • `%v` → `%v`\n",
-				diff.ValueDiff.Before, diff.ValueDiff.After))
+				oc.Change.Before, oc.Change.After))
 		}
 	}
 
 	return sb.String()
 }
 
-func (t *SlackTarget) buildFallbackText(d *tfstate.StateDiff) string {
-	resourceCount := len(d.ResourceDiffs)
-	outputCount := len(d.OutputDiffs)
+func (t *SlackTarget) buildFallbackText(plan *tfplan.Plan) string {
+	resourceCount := len(plan.ResourceChanges)
+	outputCount := len(plan.OutputChanges)
 
 	parts := []string{}
 	if resourceCount > 0 {
@@ -190,18 +207,89 @@ func (t *SlackTarget) buildFallbackText(d *tfstate.StateDiff) string {
 		parts = append(parts, fmt.Sprintf("%d output(s)", outputCount))
 	}
 
-	return fmt.Sprintf("Terraform state changes detected: %s changed", strings.Join(parts, ", "))
+	return fmt.Sprintf("Terraform plan changes detected: %s changed", strings.Join(parts, ", "))
+}
+
+// actionsToStatus maps Terraform plan actions to a readable status string.
+func actionsToStatus(actions []string) string {
+	if len(actions) == 0 {
+		return "unknown"
+	}
+
+	// Sort actions to normalize ordering
+	sortedActions := make([]string, len(actions))
+	copy(sortedActions, actions)
+	sort.Strings(sortedActions)
+
+	// Single action cases
+	if len(sortedActions) == 1 {
+		switch sortedActions[0] {
+		case "create":
+			return "added"
+		case "delete":
+			return "removed"
+		case "update":
+			return "changed"
+		default:
+			return sortedActions[0]
+		}
+	}
+
+	// Multiple actions (typically replace operations: create + delete)
+	if len(sortedActions) == 2 {
+		if sortedActions[0] == "create" && sortedActions[1] == "delete" {
+			return "replaced"
+		}
+	}
+
+	return "changed"
 }
 
 func statusEmoji(status string) string {
 	switch status {
-	case tfstate.DiffStatusAdded:
+	case "added":
 		return ":large_green_circle:"
-	case tfstate.DiffStatusRemoved:
+	case "removed":
 		return ":red_circle:"
-	case tfstate.DiffStatusChanged:
+	case "changed", "replaced":
 		return ":large_yellow_circle:"
 	default:
 		return ":white_circle:"
 	}
+}
+
+// ValueChange represents a before/after value pair for Slack formatting.
+type ValueChange struct {
+	Before interface{}
+	After  interface{}
+}
+
+// extractChanges compares before and after attribute maps and returns changed attributes.
+func extractChanges(before, after map[string]interface{}) map[string]ValueChange {
+	changes := make(map[string]ValueChange)
+
+	// Collect all unique attribute keys
+	allKeys := make(map[string]bool)
+	for key := range before {
+		allKeys[key] = true
+	}
+	for key := range after {
+		allKeys[key] = true
+	}
+
+	// Compare each attribute
+	for key := range allKeys {
+		beforeVal := before[key]
+		afterVal := after[key]
+
+		// Check if values are different (simple comparison)
+		if fmt.Sprintf("%v", beforeVal) != fmt.Sprintf("%v", afterVal) {
+			changes[key] = ValueChange{
+				Before: beforeVal,
+				After:  afterVal,
+			}
+		}
+	}
+
+	return changes
 }

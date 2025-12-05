@@ -1,0 +1,47 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.5.7",
+  "resource_changes": [
+    {
+      "address": "aws_instance.web_server",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web_server",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "instance_type": "t2.micro",
+          "ami": "ami-0c55b159cbfafe1f0"
+        },
+        "after": {
+          "instance_type": "t2.micro",
+          "ami": "ami-0c55b159cbfafe1f0"
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.app_data",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "app_data",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "bucket": "my-app-data-bucket",
+          "versioning": {
+            "enabled": true
+          }
+        },
+        "after": {
+          "bucket": "my-app-data-bucket",
+          "versioning": {
+            "enabled": true
+          }
+        }
+      }
+    }
+  ],
+  "output_changes": {}
+}

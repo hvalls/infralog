@@ -1,8 +1,7 @@
 package target
 
 import (
-	"infralog/config"
-	"infralog/tfstate"
+	"infralog/tfplan"
 	"time"
 )
 
@@ -11,25 +10,16 @@ type Target interface {
 	Write(*Payload) error
 }
 
-// Payload contains the change data and metadata sent to targets.
+// Payload contains the change data sent to targets.
 type Payload struct {
-	Diffs    *tfstate.StateDiff `json:"diffs"`
-	Metadata Metadata           `json:"metadata"`
-}
-
-// Metadata contains contextual information about the state change event.
-type Metadata struct {
-	Timestamp time.Time      `json:"timestamp"`
-	TFState   config.TFState `json:"tfstate"`
+	Plan     *tfplan.Plan `json:"plan"`
+	Datetime time.Time    `json:"datetime"`
 }
 
 // NewPayload creates a new Payload with the current timestamp.
-func NewPayload(diff *tfstate.StateDiff, tfs config.TFState) *Payload {
+func NewPayload(plan *tfplan.Plan) *Payload {
 	return &Payload{
-		Diffs: diff,
-		Metadata: Metadata{
-			Timestamp: time.Now().UTC(),
-			TFState:   tfs,
-		},
+		Plan:     plan,
+		Datetime: time.Now().UTC(),
 	}
 }

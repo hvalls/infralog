@@ -1,29 +1,11 @@
-# Infralog configuration example
-# This file shows all available configuration options.
-
-# Polling configuration
-polling:
-  interval: 600  # Polling interval in seconds
-
-# Terraform state file location (configure one backend)
-tfstate:
-  # S3 backend - read state from Amazon S3
-  s3:
-    bucket: "my-terraform-state-bucket"
-    key: "path/to/terraform.tfstate"
-    region: "us-east-1"
-
-  # Local backend - read state from local filesystem
-  # Uncomment below and comment out s3 to use local backend
-  # local:
-  #   path: "/path/to/terraform.tfstate"
+# Infralog Configuration Example
+# Infralog analyzes Terraform plan files and notifies configured targets about changes
 
 # Notification targets (configure one or more)
-# If no targets are configured, stdout is used automatically
 target:
   # Webhook target - sends JSON payload to an HTTP endpoint
   webhook:
-    url: "https://example.com/infralog"
+    url: "https://your-api.example.com/webhooks/terraform"
     method: "POST"  # POST or PUT (default: POST)
     retry:
       max_attempts: 3        # Number of retry attempts (default: 3)
@@ -37,16 +19,10 @@ target:
 
   # Slack target - sends formatted messages to a Slack channel
   slack:
-    webhook_url: "https://hooks.slack.com/services/T00/B00/XXX"
+    webhook_url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
     channel: "#infrastructure"  # Optional: override default channel
     username: "Infralog"        # Optional: override bot username
     icon_emoji: ":terraform:"   # Optional: override bot icon
-
-  # Stdout target - logs changes to console
-  # Useful for debugging, testing, or piping to other tools
-  stdout:
-    enabled: true
-    format: "text"  # "text" or "json" (default: "text")
 
 # Resource and output filtering
 filter:
@@ -63,14 +39,3 @@ filter:
   outputs:
     - "instance_ip"
     - "database_endpoint"
-
-# State persistence
-persistence:
-  # Optional: Path to persist the last-seen state.
-  # Enables change detection across restarts.
-  state_file: "/var/lib/infralog/state.json"
-
-# Prometheus metrics
-metrics:
-  enabled: true
-  address: ":8080"  # Address to expose /metrics endpoint (default: ":8080")

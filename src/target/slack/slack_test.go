@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"infralog/config"
 	"infralog/target"
-	"infralog/tfstate"
+	"infralog/tfplan"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -85,24 +86,24 @@ func TestWrite_Success(t *testing.T) {
 		t.Fatalf("Failed to create slack target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{
-		ResourceDiffs: []tfstate.ResourceDiff{
+	plan := &tfplan.Plan{
+		ResourceChanges: []tfplan.ResourceChange{
 			{
-				ResourceType: "aws_instance",
-				ResourceName: "web",
-				Status:       tfstate.DiffStatusChanged,
-				AttributeDiffs: map[string]tfstate.ValueDiff{
-					"instance_type": {Before: "t2.micro", After: "t2.small"},
+				Type: "aws_instance",
+				Name: "web",
+				Change: tfplan.Change{
+					Actions: []string{"update"},
+					Before: map[string]interface{}{
+						"instance_type": "t2.micro",
+					},
+					After: map[string]interface{}{
+						"instance_type": "t2.small",
+					},
 				},
 			},
 		},
 	}
-	tfs := config.TFState{}
-	tfs.S3.Bucket = "my-bucket"
-	tfs.S3.Key = "terraform.tfstate"
-	tfs.S3.Region = "us-east-1"
-
-	payload := target.NewPayload(diff, tfs)
+	payload := target.NewPayload(plan)
 	if err := slackTarget.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
@@ -134,13 +135,19 @@ func TestWrite_WithOptionalFields(t *testing.T) {
 		t.Fatalf("Failed to create slack target: %v", err)
 	}
 
-	diff := &tfstate.StateDiff{
-		ResourceDiffs: []tfstate.ResourceDiff{
-			{ResourceType: "aws_s3_bucket", ResourceName: "data", Status: tfstate.DiffStatusAdded},
+	plan := &tfplan.Plan{
+		ResourceChanges: []tfplan.ResourceChange{
+			{
+				Type: "aws_s3_bucket",
+				Name: "data",
+				Change: tfplan.Change{
+					Actions: []string{"create"},
+				},
+			},
 		},
 	}
 
-	payload := target.NewPayload(diff, config.TFState{})
+	payload := target.NewPayload(plan)
 	if err := slackTarget.Write(payload); err != nil {
 		t.Errorf("Expected no error but got: %v", err)
 	}
@@ -167,7 +174,7 @@ func TestWrite_ServerError(t *testing.T) {
 		t.Fatalf("Failed to create slack target: %v", err)
 	}
 
-	payload := target.NewPayload(&tfstate.StateDiff{}, config.TFState{})
+	payload := target.NewPayload(&tfplan.Plan{})
 	err = slackTarget.Write(payload)
 	if err == nil {
 		t.Error("Expected an error but got none")
@@ -179,9 +186,10 @@ func TestStatusEmoji(t *testing.T) {
 		status   string
 		expected string
 	}{
-		{tfstate.DiffStatusAdded, ":large_green_circle:"},
-		{tfstate.DiffStatusRemoved, ":red_circle:"},
-		{tfstate.DiffStatusChanged, ":large_yellow_circle:"},
+		{"added", ":large_green_circle:"},
+		{"removed", ":red_circle:"},
+		{"changed", ":large_yellow_circle:"},
+		{"replaced", ":large_yellow_circle:"},
 		{"unknown", ":white_circle:"},
 	}
 
@@ -198,28 +206,33 @@ func TestBuildFallbackText(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		diff     *tfstate.StateDiff
+		plan     *tfplan.Plan
 		contains string
 	}{
 		{
 			name: "Resources only",
-			diff: &tfstate.StateDiff{
-				ResourceDiffs: []tfstate.ResourceDiff{{}, {}},
+			plan: &tfplan.Plan{
+				ResourceChanges: []tfplan.ResourceChange{{}, {}},
 			},
 			contains: "2 resource(s)",
 		},
 		{
 			name: "Outputs only",
-			diff: &tfstate.StateDiff{
-				OutputDiffs: []tfstate.OutputDiff{{}},
+			plan: &tfplan.Plan{
+				OutputChanges: map[string]tfplan.OutputChange{
+					"output1": {},
+				},
 			},
 			contains: "1 output(s)",
 		},
 		{
 			name: "Both resources and outputs",
-			diff: &tfstate.StateDiff{
-				ResourceDiffs: []tfstate.ResourceDiff{{}},
-				OutputDiffs:   []tfstate.OutputDiff{{}, {}},
+			plan: &tfplan.Plan{
+				ResourceChanges: []tfplan.ResourceChange{{}},
+				OutputChanges: map[string]tfplan.OutputChange{
+					"output1": {},
+					"output2": {},
+				},
 			},
 			contains: "1 resource(s)",
 		},
@@ -227,58 +240,55 @@ func TestBuildFallbackText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := target.buildFallbackText(tt.diff)
+			result := target.buildFallbackText(tt.plan)
 			if result == "" {
 				t.Error("Expected non-empty fallback text")
+			}
+			if !strings.Contains(result, tt.contains) {
+				t.Errorf("Expected result to contain %q, got %q", tt.contains, result)
 			}
 		})
 	}
 }
 
-func TestFormatResourceDiffs(t *testing.T) {
+func TestFormatResourceChanges(t *testing.T) {
 	target := &SlackTarget{}
 
-	diffs := []tfstate.ResourceDiff{
+	changes := []tfplan.ResourceChange{
 		{
-			ResourceType: "aws_instance",
-			ResourceName: "web",
-			Status:       tfstate.DiffStatusChanged,
-			AttributeDiffs: map[string]tfstate.ValueDiff{
-				"instance_type": {Before: "t2.micro", After: "t2.small"},
+			Type: "aws_instance",
+			Name: "web",
+			Change: tfplan.Change{
+				Actions: []string{"update"},
+				Before: map[string]interface{}{
+					"instance_type": "t2.micro",
+				},
+				After: map[string]interface{}{
+					"instance_type": "t2.small",
+				},
 			},
 		},
 		{
-			ResourceType: "aws_s3_bucket",
-			ResourceName: "data",
-			Status:       tfstate.DiffStatusAdded,
+			Type: "aws_s3_bucket",
+			Name: "data",
+			Change: tfplan.Change{
+				Actions: []string{"create"},
+			},
 		},
 	}
 
-	result := target.formatResourceDiffs(diffs)
+	result := target.formatResourceChanges(changes)
 
 	if result == "" {
 		t.Error("Expected non-empty result")
 	}
-	if !contains(result, "aws_instance.web") {
+	if !strings.Contains(result, "aws_instance.web") {
 		t.Error("Expected result to contain aws_instance.web")
 	}
-	if !contains(result, "aws_s3_bucket.data") {
+	if !strings.Contains(result, "aws_s3_bucket.data") {
 		t.Error("Expected result to contain aws_s3_bucket.data")
 	}
-	if !contains(result, "instance_type") {
+	if !strings.Contains(result, "instance_type") {
 		t.Error("Expected result to contain instance_type attribute")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

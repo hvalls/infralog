@@ -9,43 +9,13 @@ import (
 )
 
 type Config struct {
-	Polling struct {
-		Interval int `yaml:"interval"`
-	} `yaml:"polling"`
-	TFState     TFState       `yaml:"tfstate"`
-	Target      Target        `yaml:"target"`
-	Filter      Filter        `yaml:"filter"`
-	Persistence Persistence   `yaml:"persistence"`
-	Metrics     MetricsConfig `yaml:"metrics"`
-}
-
-type MetricsConfig struct {
-	Enabled bool   `yaml:"enabled"`
-	Address string `yaml:"address"`
-}
-
-// WithDefaults returns a MetricsConfig with default values applied.
-func (m MetricsConfig) WithDefaults() MetricsConfig {
-	if m.Address == "" {
-		m.Address = ":8080"
-	}
-	return m
+	Target Target `yaml:"target"`
+	Filter Filter `yaml:"filter"`
 }
 
 type Target struct {
 	Webhook WebhookConfig `yaml:"webhook"`
 	Slack   SlackConfig   `yaml:"slack"`
-	Stdout  StdoutConfig  `yaml:"stdout"`
-}
-
-type StdoutConfig struct {
-	Enabled bool   `yaml:"enabled"`
-	Format  string `yaml:"format"` // "json" or "text" (default: "text")
-}
-
-// IsJSON returns true if the stdout format is set to JSON.
-func (s StdoutConfig) IsJSON() bool {
-	return s.Enabled && s.Format == "json"
 }
 
 type SlackConfig struct {
@@ -83,25 +53,6 @@ func (r RetryConfig) WithDefaults() RetryConfig {
 		r.StatusCodes = []int{500, 502, 503, 504}
 	}
 	return r
-}
-
-type Persistence struct {
-	StateFile string `yaml:"state_file"`
-}
-
-type TFState struct {
-	S3    S3Config    `yaml:"s3" json:"s3"`
-	Local LocalConfig `yaml:"local" json:"local"`
-}
-
-type S3Config struct {
-	Bucket string `yaml:"bucket" json:"bucket"`
-	Key    string `yaml:"key" json:"key"`
-	Region string `yaml:"region" json:"region"`
-}
-
-type LocalConfig struct {
-	Path string `yaml:"path" json:"path"`
 }
 
 type Filter struct {

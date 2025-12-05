@@ -22,12 +22,3 @@ target:
     username: "Infralog"        # Optional: override bot username
     icon_emoji: ":terraform:"   # Optional: override bot icon
 ```
-
-## Message Format
-
-Messages include:
-
-- Header with "Terraform State Changes Detected"
-- State file location (bucket, key, region)
-- Resource changes with color-coded status indicators
-- Output changes with `before`/`after` values
