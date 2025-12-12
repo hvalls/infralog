@@ -127,10 +127,10 @@ func TestLoadConfigFromEnv(t *testing.T) {
 		{
 			name: "webhook retry configuration from env",
 			envVars: map[string]string{
-				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS":      "5",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS":  "2000",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS":      "60000",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS":   "500,502,503",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS":     "5",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS": "2000",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS":     "60000",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS":  "500,502,503",
 			},
 			want: Config{
 				Target: Target{
@@ -195,16 +195,16 @@ func TestLoadConfigFromEnv(t *testing.T) {
 		{
 			name: "all configuration from env",
 			envVars: map[string]string{
-				"INFRALOG_TARGET_WEBHOOK_URL":                     "https://example.com/webhook",
-				"INFRALOG_TARGET_WEBHOOK_METHOD":                  "POST",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS":      "3",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS":  "1000",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS":      "30000",
-				"INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS":   "500,502,503,504",
-				"INFRALOG_TARGET_SLACK_WEBHOOK_URL":               "https://hooks.slack.com/services/xxx",
-				"INFRALOG_TARGET_SLACK_CHANNEL":                   "#infra",
-				"INFRALOG_FILTER_RESOURCE_TYPES":                  "aws_instance",
-				"INFRALOG_FILTER_OUTPUTS":                         "public_ip",
+				"INFRALOG_TARGET_WEBHOOK_URL":                    "https://example.com/webhook",
+				"INFRALOG_TARGET_WEBHOOK_METHOD":                 "POST",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS":     "3",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS": "1000",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS":     "30000",
+				"INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS":  "500,502,503,504",
+				"INFRALOG_TARGET_SLACK_WEBHOOK_URL":              "https://hooks.slack.com/services/xxx",
+				"INFRALOG_TARGET_SLACK_CHANNEL":                  "#infra",
+				"INFRALOG_FILTER_RESOURCE_TYPES":                 "aws_instance",
+				"INFRALOG_FILTER_OUTPUTS":                        "public_ip",
 			},
 			want: Config{
 				Target: Target{

@@ -15,12 +15,12 @@ const (
 	envPrefix = "INFRALOG_"
 
 	// Webhook target
-	envWebhookURL                   = "INFRALOG_TARGET_WEBHOOK_URL"
-	envWebhookMethod                = "INFRALOG_TARGET_WEBHOOK_METHOD"
-	envWebhookRetryMaxAttempts      = "INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS"
-	envWebhookRetryInitialDelayMS   = "INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS"
-	envWebhookRetryMaxDelayMS       = "INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS"
-	envWebhookRetryRetryOnStatus    = "INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS"
+	envWebhookURL                 = "INFRALOG_TARGET_WEBHOOK_URL"
+	envWebhookMethod              = "INFRALOG_TARGET_WEBHOOK_METHOD"
+	envWebhookRetryMaxAttempts    = "INFRALOG_TARGET_WEBHOOK_RETRY_MAX_ATTEMPTS"
+	envWebhookRetryInitialDelayMS = "INFRALOG_TARGET_WEBHOOK_RETRY_INITIAL_DELAY_MS"
+	envWebhookRetryMaxDelayMS     = "INFRALOG_TARGET_WEBHOOK_RETRY_MAX_DELAY_MS"
+	envWebhookRetryRetryOnStatus  = "INFRALOG_TARGET_WEBHOOK_RETRY_RETRY_ON_STATUS"
 
 	// Slack target
 	envSlackWebhookURL = "INFRALOG_TARGET_SLACK_WEBHOOK_URL"

@@ -1,113 +1,63 @@
-.PHONY: build run test lint clean docker-build docker-run docker-push docker-release docker-compose-up help
+.PHONY: build test lint docker-build docker-run docker-push docker-release help
 
-# Variables
 BINARY_NAME := infralog
 SRC_DIR := src
 BUILD_DIR := bin
 DOCKER_IMAGE := hvalls/infralog
 DOCKER_TAG := latest
 
-# Go parameters
 GOCMD := go
 GOBUILD := $(GOCMD) build
 GOTEST := $(GOCMD) test
 GOMOD := $(GOCMD) mod
 GOVET := $(GOCMD) vet
 
-# Default target
 .DEFAULT_GOAL := help
 
-## Build
-
-build: ## Build the binary
+build:
 	@mkdir -p $(BUILD_DIR)
 	cd $(SRC_DIR) && $(GOBUILD) -o ../$(BUILD_DIR)/$(BINARY_NAME) -ldflags="-w -s" main.go
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
 
-build-dev: ## Build the binary without optimizations (faster compilation)
-	@mkdir -p $(BUILD_DIR)
-	cd $(SRC_DIR) && $(GOBUILD) -o ../$(BUILD_DIR)/$(BINARY_NAME) main.go
-	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
-
-## Run
-
-run: build ## Build and run with example config
-	./$(BUILD_DIR)/$(BINARY_NAME) --config-file examples/local-test/config.yml
-
-run-dev: ## Run without building (using go run)
-	cd $(SRC_DIR) && $(GOCMD) run main.go --config-file ../examples/local-test/config.yml
-
-## Test
-
-test: ## Run all tests
+test:
 	cd $(SRC_DIR) && $(GOTEST) ./...
 
-test-verbose: ## Run all tests with verbose output
-	cd $(SRC_DIR) && $(GOTEST) -v ./...
-
-test-coverage: ## Run tests with coverage report
+test-coverage:
 	cd $(SRC_DIR) && $(GOTEST) -coverprofile=coverage.out ./...
 	cd $(SRC_DIR) && $(GOCMD) tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: $(SRC_DIR)/coverage.html"
 
-## Lint & Format
-
-lint: ## Run go vet
+lint:
 	cd $(SRC_DIR) && $(GOVET) ./...
 
-fmt: ## Format code
+fmt:
 	cd $(SRC_DIR) && $(GOCMD) fmt ./...
 
-## Dependencies
-
-deps: ## Download dependencies
+deps:
 	cd $(SRC_DIR) && $(GOMOD) download
 
-deps-tidy: ## Tidy dependencies
+deps-tidy:
 	cd $(SRC_DIR) && $(GOMOD) tidy
 
-## Docker
-
-docker-build: ## Build Docker image
+docker-build:
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
-docker-run: docker-build ## Build and run Docker container with local test config
+docker-run: docker-build
 	docker run --rm \
 		-p 8080:8080 \
 		-v $(PWD)/examples/local-test/config-docker.yml:/etc/infralog/config.yml:ro \
 		-v $(PWD)/examples/local-test:/data:ro \
 		$(DOCKER_IMAGE):$(DOCKER_TAG)
 
-docker-push: docker-build ## Push Docker image to Docker Hub
+docker-push: docker-build
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 
-docker-release: ## Build and push a versioned release (usage: make docker-release DOCKER_TAG=v1.0.0)
+docker-release:
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -t $(DOCKER_IMAGE):latest .
 	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 	docker push $(DOCKER_IMAGE):latest
 
-## Local Testing
-
-simulate: ## Run the state change simulator
-	./examples/local-test/simulate-changes.sh
-
-init-test: ## Initialize test state file
-	cp examples/local-test/state_v1.json examples/local-test/terraform.tfstate
-
-## Clean
-
-clean: ## Remove build artifacts
-	rm -rf $(BUILD_DIR)
-	rm -f $(SRC_DIR)/coverage.out $(SRC_DIR)/coverage.html
-
-clean-docker: ## Remove Docker image
-	docker rmi $(DOCKER_IMAGE):$(DOCKER_TAG) 2>/dev/null || true
-
-clean-all: clean clean-docker ## Remove all artifacts
-
-## Help
-
-help: ## Show this help
+help:
 	@echo "Infralog - Terraform State Change Monitor"
 	@echo ""
 	@echo "Usage: make [target]"

@@ -7,13 +7,13 @@ import (
 
 func TestApplyFilter(t *testing.T) {
 	tests := []struct {
-		name                  string
-		planFile              string
-		filter                config.Filter
-		wantResourceChanges   int
-		wantOutputChanges     int
-		wantFirstResType      string
-		wantFirstResAction    string
+		name                string
+		planFile            string
+		filter              config.Filter
+		wantResourceChanges int
+		wantOutputChanges   int
+		wantFirstResType    string
+		wantFirstResAction  string
 	}{
 		{
 			name:                "create action",
