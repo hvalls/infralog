@@ -8,7 +8,7 @@ Sends HTTP POST/PUT requests to a configured URL with JSON payloads containing i
 
 For configuration options, see the [Configuration](../configuration.md) page.
 
-## Payload Format
+## Payload format
 
 ```json
 {

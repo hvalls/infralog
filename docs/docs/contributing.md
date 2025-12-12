@@ -14,7 +14,7 @@ Contributions are welcome! To contribute:
 6. Push to the branch (`git push origin feature/my-feature`)
 7. Open a pull request
 
-## Before Submitting
+## Before submitting
 
 - Ensure all tests pass
 - Add tests for new functionality
