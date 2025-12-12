@@ -83,13 +83,38 @@ func (t *SlackTarget) buildMessage(p *target.Payload) slackMessage {
 		},
 	})
 
-	// Context - timestamp
-	timeInfo := fmt.Sprintf("*Time:* %s", p.Datetime.Format("2006-01-02 15:04:05 UTC"))
+	// Context - timestamp and git metadata
+	contextText := fmt.Sprintf("*Time:* %s", p.Datetime.Format("2006-01-02 15:04:05 UTC"))
+
+	// Add git metadata if available
+	if p.Metadata != nil && p.Metadata.Git != nil {
+		git := p.Metadata.Git
+		contextText += "\n\n*Git Context*\n"
+
+		if git.Committer != "" {
+			contextText += fmt.Sprintf("👤 *Committer:* %s\n", git.Committer)
+		}
+		if git.Branch != "" {
+			contextText += fmt.Sprintf("🌿 *Branch:* `%s`\n", git.Branch)
+		}
+		if git.CommitSHA != "" {
+			// Show short SHA (first 8 characters)
+			shortSHA := git.CommitSHA
+			if len(shortSHA) > 8 {
+				shortSHA = shortSHA[:8]
+			}
+			contextText += fmt.Sprintf("📝 *Commit:* `%s`\n", shortSHA)
+		}
+		if git.RepoURL != "" {
+			contextText += fmt.Sprintf("🔗 *Repository:* %s\n", git.RepoURL)
+		}
+	}
+
 	blocks = append(blocks, block{
 		Type: "section",
 		Text: &textObject{
 			Type: "mrkdwn",
-			Text: timeInfo,
+			Text: contextText,
 		},
 	})
 

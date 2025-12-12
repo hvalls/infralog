@@ -2,23 +2,31 @@
 sidebar_position: 2
 ---
 
-# Slack Target
+# Slack target
 
 Sends formatted notifications to a Slack channel using incoming webhooks.
 
-## Setup
+For configuration options, see the [Configuration](../configuration.md) page.
 
-1. Create a Slack app at https://api.slack.com/apps
-2. Enable "Incoming Webhooks" and create a webhook for your channel
-3. Copy the webhook URL to your configuration
+## Message format
 
-## Configuration
+```
+Terraform Plan Changes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-```yaml
-target:
-  slack:
-    webhook_url: "https://hooks.slack.com/services/T00/B00/XXX"
-    channel: "#infrastructure"  # Optional: override default channel
-    username: "Infralog"        # Optional: override bot username
-    icon_emoji: ":terraform:"   # Optional: override bot icon
+Time: 2025-12-12 10:30:45 UTC
+
+Git Context
+👤 Committer: John Doe
+🌿 Branch: feature/add-vpc
+📝 Commit: abc123de
+🔗 Repository: git@github.com:company/infrastructure.git
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Resource Changes
+🟢 aws_instance.web_server - added
+🟡 aws_s3_bucket.app_data - changed
+    • instance_type: t2.micro → t2.small
+🔴 aws_security_group.old_sg - removed
 ```
