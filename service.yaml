@@ -1,6 +1,7 @@
 name: infralog
-owner: hvalls
+owners:
+  - hvalls
 description: Analyzes Terraform plan files and emits resource-level change notifications for CI/CD pipelines
-language: go
-lifecycle: production
+stack:
+  - go
 tier: infra
