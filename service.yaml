@@ -1,4 +1,5 @@
 name: infralog
+kind: Component
 owners:
   - hvalls
 description: Analyzes Terraform plan files and emits resource-level change notifications for CI/CD pipelines
